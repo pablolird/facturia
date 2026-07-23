@@ -74,6 +74,7 @@ describe('Presets', () => {
         name: 'Other User',
         email: 'other@example.com',
         password: 'pass123456',
+        turnstileToken: 'test-turnstile-token',
       });
       const res = await request(app)
         .patch(`/presets/${id}`)

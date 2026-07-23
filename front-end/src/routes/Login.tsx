@@ -58,6 +58,8 @@ export default function Login() {
   const [registerError, setRegisterError] = useState<string | null>(null);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const turnstileRef = useRef<TurnstileInstance>(null);
+  const [registerTurnstileToken, setRegisterTurnstileToken] = useState<string | null>(null);
+  const registerTurnstileRef = useRef<TurnstileInstance>(null);
 
   const loginForm = useForm<LoginData>({
     resolver: zodResolver(loginSchema),
@@ -100,14 +102,25 @@ export default function Login() {
 
   async function handleRegister(data: RegisterData) {
     setRegisterError(null);
+    if (!registerTurnstileToken) {
+      setRegisterError(t("err_captcha_failed"));
+      return;
+    }
     try {
-      await register(data.name, data.email, data.password);
+      await register(data.name, data.email, data.password, registerTurnstileToken);
       navigate("/chat");
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "";
       setRegisterError(
-        msg === "409" ? t("err_email_exists") : t("err_generic"),
+        msg === "409"
+          ? t("err_email_exists")
+          : msg === "400"
+            ? t("err_captcha_failed")
+            : t("err_generic"),
       );
+    } finally {
+      registerTurnstileRef.current?.reset();
+      setRegisterTurnstileToken(null);
     }
   }
 
@@ -284,12 +297,20 @@ export default function Login() {
                       }
                     />
                   </div>
+                  <Turnstile
+                    ref={registerTurnstileRef}
+                    siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY as string}
+                    onSuccess={setRegisterTurnstileToken}
+                    onExpire={() => setRegisterTurnstileToken(null)}
+                    onError={() => setRegisterTurnstileToken(null)}
+                    options={{ theme: "auto", size: "flexible" }}
+                  />
                 </CardContent>
                 <CardFooter className="flex-col gap-2 mt-2">
                   <Button
                     type="submit"
                     className="w-full mt-3"
-                    disabled={registerForm.formState.isSubmitting}
+                    disabled={registerForm.formState.isSubmitting || !registerTurnstileToken}
                   >
                     {registerForm.formState.isSubmitting
                       ? t("btn_creating_account")

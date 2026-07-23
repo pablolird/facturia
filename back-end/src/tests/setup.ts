@@ -1,6 +1,10 @@
-import { afterAll, beforeAll } from 'vitest';
+import { afterAll, beforeAll, vi } from 'vitest';
 
 import pool from '../db/db.js';
+
+vi.mock('../auth/turnstile.service.js', () => ({
+  verifyTurnstileToken: vi.fn().mockResolvedValue(true),
+}));
 
 beforeAll(async () => {
   await pool.query(

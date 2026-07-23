@@ -23,7 +23,7 @@ interface AuthContextValue {
   isAuthenticated: boolean;
   authLoading: boolean;
   login: (email: string, password: string, turnstileToken: string) => Promise<void>;
-  register: (name: string, email: string, password: string) => Promise<void>;
+  register: (name: string, email: string, password: string, turnstileToken: string) => Promise<void>;
   logout: () => Promise<void>;
   getAccessToken: () => string | null;
   updateUserName: (name: string) => void;
@@ -97,16 +97,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       name,
       email,
       password,
+      turnstileToken,
     }: {
       name: string;
       email: string;
       password: string;
+      turnstileToken: string;
     }) => {
       const res = await fetch(`${API_URL}/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({ name, email, password, turnstileToken }),
       });
       if (!res.ok) throw new Error(String(res.status));
       return res.json() as Promise<{ access_token: string; user: User }>;
@@ -140,8 +142,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const register = useCallback(
-    async (name: string, email: string, password: string) => {
-      await registerMutation.mutateAsync({ name, email, password });
+    async (name: string, email: string, password: string, turnstileToken: string) => {
+      await registerMutation.mutateAsync({ name, email, password, turnstileToken });
     },
     [registerMutation]
   );

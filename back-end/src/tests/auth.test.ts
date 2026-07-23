@@ -1,9 +1,5 @@
 import request from 'supertest';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-
-vi.mock('../auth/turnstile.service.js', () => ({
-  verifyTurnstileToken: vi.fn().mockResolvedValue(true),
-}));
+import { beforeEach, describe, expect, it } from 'vitest';
 
 import app from '../app.js';
 import pool from '../db/db.js';
@@ -35,6 +31,12 @@ describe('Auth', () => {
 
     it('returns 400 on invalid input', async () => {
       const res = await request(app).post('/auth/register').send({ email: 'not-valid' });
+      expect(res.status).toBe(400);
+    });
+
+    it('returns 400 without a turnstileToken', async () => {
+      const { turnstileToken: _omit, ...rest } = TEST_USER;
+      const res = await request(app).post('/auth/register').send(rest);
       expect(res.status).toBe(400);
     });
   });

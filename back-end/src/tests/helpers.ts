@@ -6,12 +6,14 @@ export interface TestUser {
   name: string;
   email: string;
   password: string;
+  turnstileToken: string;
 }
 
 export const TEST_USER: TestUser = {
   name: 'Test User',
   email: 'test@example.com',
   password: 'password123',
+  turnstileToken: 'test-turnstile-token',
 };
 
 export async function registerAndLogin(user: TestUser = TEST_USER): Promise<{

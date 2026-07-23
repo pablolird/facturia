@@ -35,6 +35,7 @@ const registerSchema = z.object({
   name: z.string().min(2, { error: 'Name must be at least 2 characters' }).max(50, { error: 'Name must be at most 50 characters' }),
   email: z.email(),
   password: z.string().min(6, { error: 'Password must be at least 6 characters' }),
+  turnstileToken: z.string().min(1, { error: 'Captcha verification is required' }),
 });
 
 const loginSchema = z.object({
@@ -51,6 +52,12 @@ export async function register(req: Request, res: Response): Promise<void> {
   }
 
   const { name, email, password } = result.data;
+
+  const captchaValid = await verifyTurnstileToken(result.data.turnstileToken, req.ip);
+  if (!captchaValid) {
+    res.status(400).json({ error: 'Captcha verification failed' });
+    return;
+  }
 
   try {
     const user = await registerUser(name, email, password);

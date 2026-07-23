@@ -77,6 +77,7 @@ describe('Conversations', () => {
         name: 'Other User',
         email: 'other-conv@example.com',
         password: 'pass123456',
+        turnstileToken: 'test-turnstile-token',
       });
       const res = await request(app)
         .get(`/conversations/${convId}`)
