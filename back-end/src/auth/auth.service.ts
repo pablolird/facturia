@@ -77,7 +77,9 @@ export async function createSessionForUser(
 export async function refreshTokens(incomingToken: string): Promise<InternalSession | null> {
   let payload: JwtRefreshPayload;
   try {
-    payload = jwt.verify(incomingToken, requireEnv('JWT_REFRESH_SECRET')) as JwtRefreshPayload;
+    payload = jwt.verify(incomingToken, requireEnv('JWT_REFRESH_SECRET'), {
+      algorithms: ['HS256'],
+    }) as JwtRefreshPayload;
   } catch {
     return null;
   }
@@ -103,7 +105,9 @@ export async function refreshTokens(incomingToken: string): Promise<InternalSess
 export async function revokeRefreshToken(incomingToken: string): Promise<void> {
   let payload: JwtRefreshPayload;
   try {
-    payload = jwt.verify(incomingToken, requireEnv('JWT_REFRESH_SECRET')) as JwtRefreshPayload;
+    payload = jwt.verify(incomingToken, requireEnv('JWT_REFRESH_SECRET'), {
+      algorithms: ['HS256'],
+    }) as JwtRefreshPayload;
   } catch {
     return;
   }
@@ -112,7 +116,9 @@ export async function revokeRefreshToken(incomingToken: string): Promise<void> {
 
 export function verifyAccessToken(token: string): JwtAccessPayload | null {
   try {
-    const payload = jwt.verify(token, requireEnv('JWT_ACCESS_SECRET')) as JwtAccessPayload;
+    const payload = jwt.verify(token, requireEnv('JWT_ACCESS_SECRET'), {
+      algorithms: ['HS256'],
+    }) as JwtAccessPayload;
     if (payload.type !== 'access') return null;
     return payload;
   } catch {

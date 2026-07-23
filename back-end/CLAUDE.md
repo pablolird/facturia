@@ -100,6 +100,7 @@ Multi-stage `Dockerfile` (builder → runner). SQL migration files are not emitt
 | `CORS_ORIGIN` | Allowed frontend origin (default: `http://localhost:3001`) |
 | `PORT` | Server port (default: `3000`) |
 | `DEEPSEEK_API_KEY` | DeepSeek API key for AI features |
+| `TURNSTILE_SECRET_KEY` | Cloudflare Turnstile secret key, verifies the login CAPTCHA |
 
 Copy `.env.example` → `.env` for local dev. Docker environments use `.env.qa` / `.env.prod`.
 

@@ -35,6 +35,7 @@ const en = {
   btn_creating_account: 'Creating account…',
   err_invalid_credentials: 'Invalid credentials.',
   err_email_exists: 'An account with this email already exists.',
+  err_captcha_failed: 'Captcha verification failed. Please try again.',
 
   // Sidebar
   sidebar_chats: 'Chats',
@@ -178,6 +179,7 @@ const es: typeof en = {
   btn_creating_account: 'Creando cuenta…',
   err_invalid_credentials: 'Credenciales inválidas.',
   err_email_exists: 'Ya existe una cuenta con este email.',
+  err_captcha_failed: 'Verificación de captcha fallida. Inténtalo de nuevo.',
 
   sidebar_chats: 'Chats',
   sidebar_new_chat: 'Nuevo chat',
@@ -316,6 +318,7 @@ const pt: typeof en = {
   btn_creating_account: 'Criando conta…',
   err_invalid_credentials: 'Credenciais inválidas.',
   err_email_exists: 'Já existe uma conta com este email.',
+  err_captcha_failed: 'Falha na verificação do captcha. Tente novamente.',
 
   sidebar_chats: 'Conversas',
   sidebar_new_chat: 'Nova conversa',

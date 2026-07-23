@@ -13,8 +13,13 @@ dist-ssr
 *.local
 
 # Environment variables
+# .env.example is intentionally NOT ignored — it's a safe template
 .env
-.env.*
+.env.local
+.env.qa
+.env.prod
+.env.staging
+.env.*.local
 
 # TypeScript build cache
 *.tsbuildinfo

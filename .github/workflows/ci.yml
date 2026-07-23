@@ -29,6 +29,7 @@ jobs:
     env:
       DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_db
       JWT_ACCESS_SECRET: ci-access-secret-key
+      TURNSTILE_SECRET_KEY: ci-turnstile-secret-key
       JWT_REFRESH_SECRET: ci-refresh-secret-key
 
     steps:

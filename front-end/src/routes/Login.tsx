@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Sparkles } from "lucide-react";
+import { Turnstile, type TurnstileInstance } from "@marsidev/react-turnstile";
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
 import type { Lang } from "@/lib/translations";
@@ -55,6 +56,8 @@ export default function Login() {
   const navigate = useNavigate();
   const [loginError, setLoginError] = useState<string | null>(null);
   const [registerError, setRegisterError] = useState<string | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const turnstileRef = useRef<TurnstileInstance>(null);
 
   const loginForm = useForm<LoginData>({
     resolver: zodResolver(loginSchema),
@@ -72,14 +75,26 @@ export default function Login() {
 
   async function handleLogin(data: LoginData) {
     setLoginError(null);
+    if (!turnstileToken) {
+      setLoginError(t("err_captcha_failed"));
+      return;
+    }
     try {
-      await login(data.email, data.password);
+      await login(data.email, data.password, turnstileToken);
       navigate("/chat");
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "";
       setLoginError(
-        msg === "401" ? t("err_invalid_credentials") : t("err_generic"),
+        msg === "401"
+          ? t("err_invalid_credentials")
+          : msg === "400"
+            ? t("err_captcha_failed")
+            : t("err_generic"),
       );
+    } finally {
+      // Turnstile tokens are single-use — reset to get a fresh one for the next attempt
+      turnstileRef.current?.reset();
+      setTurnstileToken(null);
     }
   }
 
@@ -179,12 +194,20 @@ export default function Login() {
                       message={loginForm.formState.errors.password?.message}
                     />
                   </div>
+                  <Turnstile
+                    ref={turnstileRef}
+                    siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY as string}
+                    onSuccess={setTurnstileToken}
+                    onExpire={() => setTurnstileToken(null)}
+                    onError={() => setTurnstileToken(null)}
+                    options={{ theme: "auto", size: "flexible" }}
+                  />
                 </CardContent>
                 <CardFooter className="flex-col gap-2 mt-2">
                   <Button
                     type="submit"
                     className="w-full mt-3"
-                    disabled={loginForm.formState.isSubmitting}
+                    disabled={loginForm.formState.isSubmitting || !turnstileToken}
                   >
                     {loginForm.formState.isSubmitting
                       ? t("btn_signing_in")

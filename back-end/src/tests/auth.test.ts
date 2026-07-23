@@ -1,9 +1,15 @@
 import request from 'supertest';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+vi.mock('../auth/turnstile.service.js', () => ({
+  verifyTurnstileToken: vi.fn().mockResolvedValue(true),
+}));
 
 import app from '../app.js';
 import pool from '../db/db.js';
 import { TEST_USER } from './helpers.js';
+
+const LOGIN_EXTRA = { turnstileToken: 'test-turnstile-token' };
 
 describe('Auth', () => {
   beforeEach(async () => {
@@ -38,7 +44,7 @@ describe('Auth', () => {
       await request(app).post('/auth/register').send(TEST_USER);
       const res = await request(app)
         .post('/auth/login')
-        .send({ email: TEST_USER.email, password: TEST_USER.password });
+        .send({ email: TEST_USER.email, password: TEST_USER.password, ...LOGIN_EXTRA });
       expect(res.status).toBe(200);
       expect(res.body.access_token).toBeDefined();
       expect(res.headers['set-cookie']).toBeDefined();
@@ -48,15 +54,22 @@ describe('Auth', () => {
       await request(app).post('/auth/register').send(TEST_USER);
       const res = await request(app)
         .post('/auth/login')
-        .send({ email: TEST_USER.email, password: 'wrongpassword' });
+        .send({ email: TEST_USER.email, password: 'wrongpassword', ...LOGIN_EXTRA });
       expect(res.status).toBe(401);
     });
 
     it('returns 401 for unknown email', async () => {
       const res = await request(app)
         .post('/auth/login')
-        .send({ email: 'nobody@example.com', password: 'password123' });
+        .send({ email: 'nobody@example.com', password: 'password123', ...LOGIN_EXTRA });
       expect(res.status).toBe(401);
+    });
+
+    it('returns 400 without a turnstileToken', async () => {
+      const res = await request(app)
+        .post('/auth/login')
+        .send({ email: TEST_USER.email, password: TEST_USER.password });
+      expect(res.status).toBe(400);
     });
   });
 

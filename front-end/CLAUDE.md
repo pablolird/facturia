@@ -109,10 +109,11 @@ Both are wrapped in `SidebarProvider` in their respective route components.
 
 `@/` maps to `src/`. Configured in both `vite.config.ts` (resolve.alias) and `tsconfig.app.json` (paths). Both configs include `"ignoreDeprecations": "6.0"` to suppress the TS6 `baseUrl` deprecation warning.
 
-## Required env var
+## Required env vars
 
 | Variable | Purpose |
 |---|---|
 | `VITE_API_BASE_URL` | Backend base URL (e.g. `http://localhost:3000`) |
+| `VITE_TURNSTILE_SITE_KEY` | Cloudflare Turnstile site key for the login CAPTCHA (public, safe to expose client-side) |
 
-Set in `.env` for local dev.
+Set in `.env` for local dev; see `.env.example`.

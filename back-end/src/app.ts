@@ -1,6 +1,7 @@
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import express, { type Express, type NextFunction, type Request, type Response } from 'express';
+import helmet from 'helmet';
 
 import aiRouter from './ai/ai.router.js';
 import { authenticate } from './auth/auth.middleware.js';
@@ -12,6 +13,7 @@ import usersRouter from './users/users.router.js';
 
 const app: Express = express();
 
+app.use(helmet());
 app.use(
   cors({
     origin: process.env['CORS_ORIGIN'] ?? 'http://localhost:3001',

@@ -22,7 +22,7 @@ interface AuthContextValue {
   accessToken: string | null;
   isAuthenticated: boolean;
   authLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string, turnstileToken: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   getAccessToken: () => string | null;
@@ -71,15 +71,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     mutationFn: async ({
       email,
       password,
+      turnstileToken,
     }: {
       email: string;
       password: string;
+      turnstileToken: string;
     }) => {
       const res = await fetch(`${API_URL}/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, turnstileToken }),
       });
       if (!res.ok) throw new Error(String(res.status));
       return res.json() as Promise<{ access_token: string; user: User }>;
@@ -131,8 +133,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
 
   const login = useCallback(
-    async (email: string, password: string) => {
-      await loginMutation.mutateAsync({ email, password });
+    async (email: string, password: string, turnstileToken: string) => {
+      await loginMutation.mutateAsync({ email, password, turnstileToken });
     },
     [loginMutation]
   );

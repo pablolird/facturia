@@ -8,6 +8,7 @@ import {
   registerUser,
   revokeRefreshToken,
 } from './auth.service.js';
+import { verifyTurnstileToken } from './turnstile.service.js';
 
 const REFRESH_COOKIE = 'refresh_token';
 const REFRESH_TOKEN_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
@@ -39,6 +40,7 @@ const registerSchema = z.object({
 const loginSchema = z.object({
   email: z.email(),
   password: z.string().min(1),
+  turnstileToken: z.string().min(1, { error: 'Captcha verification is required' }),
 });
 
 export async function register(req: Request, res: Response): Promise<void> {
@@ -71,6 +73,12 @@ export async function login(req: Request, res: Response): Promise<void> {
   const result = loginSchema.safeParse(req.body);
   if (!result.success) {
     res.status(400).json({ error: z.flattenError(result.error) });
+    return;
+  }
+
+  const captchaValid = await verifyTurnstileToken(result.data.turnstileToken, req.ip);
+  if (!captchaValid) {
+    res.status(400).json({ error: 'Captcha verification failed' });
     return;
   }
 

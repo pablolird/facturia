@@ -26,6 +26,8 @@ Or start each separately — see `back-end/CLAUDE.md` and `front-end/CLAUDE.md` 
 - Register / login / logout with JWT: 15-min access tokens stored **in React memory only** (never localStorage) + 7-day HttpOnly cookie refresh tokens
 - Refresh token rotation on every use (single-use, JTI stored in DB — prevents replay attacks)
 - Constant-time bcrypt comparison prevents user enumeration via timing side-channels
+- Login is gated by a Cloudflare Turnstile CAPTCHA (verified server-side against `TURNSTILE_SECRET_KEY`) plus IP-based rate limiting (`express-rate-limit`, 10 attempts / 15 min); registration has its own 5 / 15 min limiter
+- `helmet()` sets standard security headers on all API responses; Docker containers run as the unprivileged `node` user, not root
 - Auto-refresh at 13-min intervals (`refetchInterval`); 401 interception retries once with a fresh token (deduped via singleton `inflightRefresh` promise)
 - Role system: `admin | user` — admins bypass the paywall; role is embedded in the JWT access payload
 - `ProtectedRoute` shows a spinner while auth loads, then redirects unauthenticated users to `/login`

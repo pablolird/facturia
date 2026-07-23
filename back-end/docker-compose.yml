@@ -30,6 +30,7 @@ services:
       PORT: ${PORT:-3000}
       NODE_ENV: ${NODE_ENV}
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY}
+      TURNSTILE_SECRET_KEY: ${TURNSTILE_SECRET_KEY}
     restart: unless-stopped
 
 volumes:
