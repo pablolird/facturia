@@ -11,6 +11,11 @@ const ACCESS_TOKEN_EXPIRY = '15m';
 const REFRESH_TOKEN_EXPIRY = '7d';
 const REFRESH_TOKEN_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
 
+// Hash of an arbitrary fixed string (cost 12, matching registerUser) — compared against
+// on an unknown email so the response takes as long as a real wrong-password attempt,
+// preventing timing-based user enumeration.
+const DUMMY_PASSWORD_HASH = '$2b$12$eSybImJVoqubIWUysvhrC.Lv/pLYgXhQlTrMJ6ik2t5X6t0E.pwT6';
+
 function requireEnv(name: string): string {
   const value = process.env[name];
   if (!value) throw new Error(`Missing required env var: ${name}`);
@@ -56,11 +61,11 @@ export async function loginUser(email: string, password: string): Promise<Intern
     email.toLowerCase().trim(),
   ]);
   const user = rows[0];
-  if (!user) return null;
 
-  // Constant-time comparison prevents user enumeration via timing
-  const valid = await bcrypt.compare(password, user.password_hash);
-  if (!valid) return null;
+  // Always run bcrypt.compare, even for an unknown email, so response timing
+  // doesn't reveal whether the email is registered
+  const valid = await bcrypt.compare(password, user?.password_hash ?? DUMMY_PASSWORD_HASH);
+  if (!user || !valid) return null;
 
   return issueTokenPair(user.id, user.username, user.email, user.role);
 }
