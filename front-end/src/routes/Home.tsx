@@ -88,7 +88,7 @@ export default function Home() {
     () => localStorage.getItem("invoice-model") ?? DEEPSEEK_MODELS[0]!.id,
   );
   const [selectedPreset, setSelectedPreset] = useState(
-    () => localStorage.getItem("invoice-preset") ?? "",
+    () => (user ? localStorage.getItem(`invoice-preset_${user.id}`) : null) ?? "",
   );
   const [presetSheetOpen, setPresetSheetOpen] = useState(false);
   const [loadingConversation, setLoadingConversation] = useState(false);
@@ -110,12 +110,13 @@ export default function Home() {
   }, [selectedModel]);
 
   useEffect(() => {
+    if (!user) return;
     if (selectedPreset) {
-      localStorage.setItem("invoice-preset", selectedPreset);
+      localStorage.setItem(`invoice-preset_${user.id}`, selectedPreset);
     } else {
-      localStorage.removeItem("invoice-preset");
+      localStorage.removeItem(`invoice-preset_${user.id}`);
     }
-  }, [selectedPreset]);
+  }, [selectedPreset, user]);
 
   // ── Server data ─────────────────────────────────────────────────────────────
 

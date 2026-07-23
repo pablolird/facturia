@@ -1,5 +1,6 @@
-import { createContext, useContext, useRef, useState, type RefObject } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type RefObject } from "react";
 import type { Message } from "@/components/home/ChatMessage";
+import { useAuth } from "@/context/AuthContext";
 
 export const WELCOME_ID = "welcome";
 
@@ -25,6 +26,7 @@ interface ChatContextValue {
 const ChatContext = createContext<ChatContextValue | null>(null);
 
 export function ChatProvider({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([
     { id: WELCOME_ID, role: "assistant", content: "" },
   ]);
@@ -36,7 +38,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const [mobileTab, setMobileTab] = useState<"chat" | "preview">("chat");
   const loadOpRef = useRef(0);
 
-  function resetChat() {
+  const resetChat = useCallback(() => {
     loadOpRef.current += 1;
     setMessages([{ id: WELCOME_ID, role: "assistant", content: "" }]);
     setIsLoading(false);
@@ -44,7 +46,19 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     setTemplateHtml(null);
     setTemplateName("Invoice Template");
     setCurrentTemplateId(null);
-  }
+  }, []);
+
+  // Prevents cross-account leakage: this provider lives above <Routes> and
+  // never unmounts on logout, so without this guard the next user to log in
+  // would see the previous user's last-viewed invoice/messages.
+  const lastUserIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    const currentId = user?.id ?? null;
+    if (lastUserIdRef.current !== currentId) {
+      lastUserIdRef.current = currentId;
+      resetChat();
+    }
+  }, [user?.id, resetChat]);
 
   return (
     <ChatContext.Provider

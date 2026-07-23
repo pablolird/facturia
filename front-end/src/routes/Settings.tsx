@@ -39,15 +39,16 @@ const MODEL_KEY = "invoice-model";
 const PRESET_KEY = "invoice-preset";
 
 export default function Settings() {
-  const { getAccessToken } = useAuth();
+  const { getAccessToken, user } = useAuth();
   const { t, lang, setLang } = useLanguage();
   const token = getAccessToken();
+  const presetKey = user ? `${PRESET_KEY}_${user.id}` : null;
 
   const [defaultModel, setDefaultModel] = useState(
     () => localStorage.getItem(MODEL_KEY) ?? DEEPSEEK_MODELS[0]!.id,
   );
   const [defaultPreset, setDefaultPreset] = useState(
-    () => localStorage.getItem(PRESET_KEY) ?? "",
+    () => (presetKey ? localStorage.getItem(presetKey) : null) ?? "",
   );
   const [savedKey, setSavedKey] = useState<string | null>(null);
 
@@ -71,10 +72,11 @@ export default function Settings() {
   function handlePresetChange(value: string) {
     const actual = value === "__none__" ? "" : value;
     setDefaultPreset(actual);
+    if (!presetKey) return;
     if (actual) {
-      localStorage.setItem(PRESET_KEY, actual);
+      localStorage.setItem(presetKey, actual);
     } else {
-      localStorage.removeItem(PRESET_KEY);
+      localStorage.removeItem(presetKey);
     }
     flash("preset");
   }
