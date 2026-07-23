@@ -251,7 +251,7 @@ function LandingNav() {
 
   return (
     <nav className="sticky top-0 z-50 border-b border-border/40 bg-background/80 backdrop-blur-sm">
-      <div className="mx-auto max-w-7xl px-6 h-16 flex items-center justify-between">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 min-h-16 py-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
         <div className="flex items-center gap-8">
           <div className="font-bold text-xl tracking-tight">
             Factur<span className="text-primary">ia</span>
@@ -262,9 +262,9 @@ function LandingNav() {
             <a href="#pricing" className="hover:text-foreground transition-colors">{t("navPricing")}</a>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center flex-wrap justify-end gap-2">
           {/* Language switcher */}
-          <div className="hidden sm:flex items-center gap-1 mr-2">
+          <div className="flex items-center gap-1">
             {langs.map(({ code, label }) => (
               <button
                 key={code}

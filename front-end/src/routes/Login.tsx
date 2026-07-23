@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Sparkles } from "lucide-react";
+import { ArrowLeft, Sparkles } from "lucide-react";
 import { Turnstile, type TurnstileInstance } from "@marsidev/react-turnstile";
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
@@ -134,23 +134,32 @@ export default function Login() {
 
   return (
     <div className="h-screen w-screen flex flex-col bg-gradient-to-br from-background via-background to-primary/5 px-4">
-      <div className="flex justify-end items-center gap-1 p-3">
-        <div className="flex gap-0.5">
-          {LANGS.map((l) => (
-            <button
-              key={l.value}
-              onClick={() => setLang(l.value)}
-              className={`text-xs px-2 py-1 rounded transition-colors ${
-                lang === l.value
-                  ? "bg-muted text-foreground font-medium"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {l.label}
-            </button>
-          ))}
+      <div className="flex justify-between items-center gap-1 p-3">
+        <Link
+          to="/"
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors px-2 py-1"
+        >
+          <ArrowLeft className="size-4" />
+          {t("btn_back_to_home")}
+        </Link>
+        <div className="flex items-center gap-1">
+          <div className="flex gap-0.5">
+            {LANGS.map((l) => (
+              <button
+                key={l.value}
+                onClick={() => setLang(l.value)}
+                className={`text-xs px-2 py-1 rounded transition-colors ${
+                  lang === l.value
+                    ? "bg-muted text-foreground font-medium"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {l.label}
+              </button>
+            ))}
+          </div>
+          <ModeToggle />
         </div>
-        <ModeToggle />
       </div>
 
       <div className="flex-1 flex flex-col items-center justify-center">

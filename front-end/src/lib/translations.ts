@@ -19,6 +19,7 @@ const en = {
   // Login
   login_title: 'Facturia',
   login_subtitle: 'Sign in to your account to continue',
+  btn_back_to_home: 'Back to home',
   tab_login: 'Login',
   tab_register: 'Register',
   welcome_back: 'Welcome back',
@@ -163,6 +164,7 @@ const es: typeof en = {
 
   login_title: 'Facturia',
   login_subtitle: 'Inicia sesión para continuar',
+  btn_back_to_home: 'Volver al inicio',
   tab_login: 'Iniciar sesión',
   tab_register: 'Registrarse',
   welcome_back: 'Bienvenido/a',
@@ -302,6 +304,7 @@ const pt: typeof en = {
 
   login_title: 'Facturia',
   login_subtitle: 'Entre na sua conta para continuar',
+  btn_back_to_home: 'Voltar ao início',
   tab_login: 'Entrar',
   tab_register: 'Registrar',
   welcome_back: 'Bem-vindo/a',
