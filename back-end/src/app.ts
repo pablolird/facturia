@@ -32,6 +32,22 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok', env: process.env['NODE_ENV'] ?? 'development' });
 });
 
+// TEMPORARY: measures the proxy chain to calibrate TRUST_PROXY_HOPS; removed right after
+if (process.env['PROXY_DEBUG'] === '1') {
+  app.get('/proxy-debug', (req, res) => {
+    res.json({
+      ip: req.ip,
+      ips: req.ips,
+      xff: req.headers['x-forwarded-for'],
+      xRealIp: req.headers['x-real-ip'],
+      xVercelForwardedFor: req.headers['x-vercel-forwarded-for'],
+      cfConnectingIp: req.headers['cf-connecting-ip'],
+      trueClientIp: req.headers['true-client-ip'],
+      socket: req.socket.remoteAddress,
+    });
+  });
+}
+
 app.use('/auth', authRouter);
 app.use('/conversations', conversationsRouter);
 app.use('/presets', presetsRouter);
