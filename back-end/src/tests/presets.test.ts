@@ -41,6 +41,13 @@ describe('Presets', () => {
       expect(res.body.id).toBeDefined();
     });
 
+    it('accepts a logo larger than the default 100 KB JSON body limit', async () => {
+      const logo_data = `data:image/png;base64,${'A'.repeat(300_000)}`;
+      const res = await request(app).post('/presets').set(authHeader).send({ ...VALID_PRESET, logo_data });
+      expect(res.status).toBe(201);
+      expect(res.body.logo_data).toHaveLength(logo_data.length);
+    });
+
     it('returns 400 if name is missing', async () => {
       const res = await request(app).post('/presets').set(authHeader).send({ ruc: '123' });
       expect(res.status).toBe(400);

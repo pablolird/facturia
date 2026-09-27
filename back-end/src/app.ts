@@ -13,6 +13,10 @@ import usersRouter from './users/users.router.js';
 
 const app: Express = express();
 
+// Number of reverse proxies in front of the app (e.g. Vercel rewrite + Render load balancer),
+// so req.ip — and therefore the auth rate limiters — see the real client IP
+app.set('trust proxy', Number(process.env['TRUST_PROXY_HOPS'] ?? 0));
+
 app.use(helmet());
 app.use(
   cors({
@@ -21,7 +25,8 @@ app.use(
   }),
 );
 app.use(cookieParser());
-app.use(express.json());
+// Presets accept base64 logos up to 1.5 MB, and chat requests carry the current template with its logo
+app.use(express.json({ limit: '2mb' }));
 
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', env: process.env['NODE_ENV'] ?? 'development' });
