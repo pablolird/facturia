@@ -8,7 +8,7 @@ vi.mock('../ai/ai.service.js', () => ({
 import * as aiService from '../ai/ai.service.js';
 import app from '../app.js';
 import pool from '../db/db.js';
-import { registerAndLogin } from './helpers.js';
+import { registerAndLogin, registerAndLoginAdmin } from './helpers.js';
 
 const mockedChat = vi.mocked(aiService.chat);
 
@@ -17,7 +17,7 @@ describe('Conversations', () => {
   let authHeader: Record<string, string>;
 
   beforeAll(async () => {
-    const { accessToken: token } = await registerAndLogin();
+    const { accessToken: token } = await registerAndLoginAdmin();
     accessToken = token;
     authHeader = { Authorization: `Bearer ${accessToken}` };
   });

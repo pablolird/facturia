@@ -3,7 +3,7 @@ import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import app from '../app.js';
 import pool from '../db/db.js';
-import { registerAndLogin } from './helpers.js';
+import { registerAndLogin, VALID_PRESET } from './helpers.js';
 
 describe('Presets', () => {
   let accessToken: string;
@@ -34,7 +34,7 @@ describe('Presets', () => {
 
   describe('POST /presets', () => {
     it('creates and returns a preset', async () => {
-      const payload = { name: 'My Company', business_name: 'ACME SA', ruc: '12345678-9' };
+      const payload = VALID_PRESET;
       const res = await request(app).post('/presets').set(authHeader).send(payload);
       expect(res.status).toBe(201);
       expect(res.body).toMatchObject({ name: 'My Company', ruc: '12345678-9' });
@@ -52,7 +52,7 @@ describe('Presets', () => {
       const createRes = await request(app)
         .post('/presets')
         .set(authHeader)
-        .send({ name: 'Old Name' });
+        .send({ ...VALID_PRESET, name: 'Old Name' });
       const id = createRes.body.id as string;
 
       const res = await request(app)
@@ -67,7 +67,7 @@ describe('Presets', () => {
       const createRes = await request(app)
         .post('/presets')
         .set(authHeader)
-        .send({ name: 'Mine' });
+        .send({ ...VALID_PRESET, name: 'Mine' });
       const id = createRes.body.id as string;
 
       const { accessToken: otherToken } = await registerAndLogin({
@@ -89,7 +89,7 @@ describe('Presets', () => {
       const createRes = await request(app)
         .post('/presets')
         .set(authHeader)
-        .send({ name: 'To Delete' });
+        .send({ ...VALID_PRESET, name: 'To Delete' });
       const id = createRes.body.id as string;
 
       const delRes = await request(app).delete(`/presets/${id}`).set(authHeader);

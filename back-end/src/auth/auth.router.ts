@@ -3,11 +3,15 @@ import { rateLimit } from 'express-rate-limit';
 
 import { login, logout, refresh, register } from './auth.controller.js';
 
+// The integration suite registers dozens of users from one IP; limits are covered by config, not tests
+const skipInTests = (): boolean => process.env['NODE_ENV'] === 'test';
+
 const registerLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 5,
   standardHeaders: 'draft-8',
   legacyHeaders: false,
+  skip: skipInTests,
   message: { error: 'Too many accounts created from this IP, please try again later.' },
 });
 
@@ -16,6 +20,7 @@ const loginLimiter = rateLimit({
   limit: 10,
   standardHeaders: 'draft-8',
   legacyHeaders: false,
+  skip: skipInTests,
   message: { error: 'Too many login attempts from this IP, please try again later.' },
 });
 
