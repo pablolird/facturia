@@ -65,7 +65,7 @@ Conversations with `title`, `preset_id`, `template_html`. Each conversation owns
 `POST /ai/chat` — the core AI endpoint.
 - Enforces paywall before calling DeepSeek: atomic `UPDATE users SET ai_prompts_used = ai_prompts_used + 1 WHERE id = $1 AND ai_prompts_used < 1 RETURNING id`. Returns 402 `{ error: 'trial_exhausted' }` if the row count is 0. Admin users bypass this check.
 - Gets or creates a conversation, persists user message, calls DeepSeek, persists assistant message, updates `template_html` on the conversation.
-- System prompt has two dynamic blocks: preset injection (company details) and edit-mode (passes current `template_html` with strict minimal-patch instructions when a template already exists).
+- Two system prompts: generation (returns full `templateHtml`) and edit mode (when a template exists, the model returns `{ find, replace }` patches that `applyEdits` applies server-side, with one automatic retry on a failed match). `pnpm bench:edits` benchmarks this against the old full-regeneration prompt (`src/bench/`).
 - `deepseek-reasoner` (R1) doesn't support `response_format: json_object` — only `deepseek-chat` gets that flag. R1 output is cleaned via a markdown fence extractor before JSON.parse.
 
 ### `src/users/`
@@ -106,4 +106,4 @@ Copy `.env.example` → `.env` for local dev. Docker environments use `.env.qa` 
 
 ## Testing
 
-43 Vitest integration tests in `src/tests/`. Tests use a real PostgreSQL DB (separate from dev). `globalSetup.ts` runs migrations before the suite. `helpers.ts` provides test user creation and token extraction. DeepSeek API is mocked in `ai.test.ts`. Run with `DATABASE_URL=<test-db-url> pnpm test`.
+47 Vitest integration tests in `src/tests/`. Tests use a real PostgreSQL DB (separate from dev). `globalSetup.ts` runs migrations before the suite. `helpers.ts` provides test user creation and token extraction. DeepSeek API is mocked in `ai.test.ts`. Run with `DATABASE_URL=<test-db-url> pnpm test`.

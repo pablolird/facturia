@@ -148,7 +148,7 @@ Both are wrapped in `SidebarProvider` in their respective route components.
 | Theming | next-themes |
 | Toasts | Sonner |
 | Font | Inter Variable (@fontsource-variable) |
-| Testing | Vitest + supertest (43 integration tests, real DB) |
+| Testing | Vitest + supertest (47 integration tests, real DB) |
 | CI | GitHub Actions (2 jobs: backend + frontend) |
 | Containerisation | Docker (multi-stage), 3 compose files (base / QA / prod) |
 

@@ -6,7 +6,9 @@
 
 *Describe the invoice you want. Get print-ready HTML in seconds.*
 
-[![CI](https://github.com/pablolird/ai_template_builder/actions/workflows/ci.yml/badge.svg)](https://github.com/pablolird/ai_template_builder/actions/workflows/ci.yml)
+**[Live site](https://facturia-rose.vercel.app)** · Selected as one of the top 5 projects in the ITTI Gen AI Developer course
+
+[![CI](https://github.com/pablolird/facturia/actions/workflows/ci.yml/badge.svg)](https://github.com/pablolird/facturia/actions/workflows/ci.yml)
 ![Node.js](https://img.shields.io/badge/Node.js_22-339933?style=flat-square&logo=nodedotjs&logoColor=white)
 ![React](https://img.shields.io/badge/React_19-61DAFB?style=flat-square&logo=react&logoColor=black)
 ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white)
@@ -33,7 +35,7 @@ You describe what you need ("professional invoice for a consulting service, dark
 **AI Invoice Generation**
 - Natural-language chat interface — describe any template, get live HTML
 - Two AI models: **DeepSeek V3** (fast) and **DeepSeek R1 Reasoner** (deeper reasoning)
-- Edit mode: follow-up messages apply minimal patches, not full regenerations
+- Edit mode: follow-up messages return small find/replace patches applied server-side, not full regenerations ([how it works](#how-edit-mode-works))
 - Company logo auto-injected into every template
 
 **Paraguay SIFEN Compliance**
@@ -65,7 +67,9 @@ You describe what you need ("professional invoice for a consulting service, dark
 **Production-ready Auth**
 - 15-min access tokens (in-memory, never localStorage) + 7-day HttpOnly cookie refresh tokens
 - Single-use refresh token rotation (prevents replay attacks)
-- Admin role bypasses paywall; user role gets 1 free generation
+- Cloudflare Turnstile CAPTCHA on login and registration, IP rate limiting, `helmet` security headers
+- Constant-time login check so response timing can't reveal which emails are registered
+- Admin role bypasses paywall; user role gets 1 free generation, enforced by a single atomic SQL update (race-safe)
 
 ---
 
@@ -85,8 +89,49 @@ You describe what you need ("professional invoice for a consulting service, dark
 | AI | DeepSeek API (`deepseek-chat` · `deepseek-reasoner`) via OpenAI-compatible SDK |
 | Auth | JWT · bcryptjs · HttpOnly cookie refresh tokens with JTI rotation |
 | Validation | Zod v4 (frontend + backend) · react-hook-form |
-| Testing | Vitest · supertest · 43 integration tests against a real DB |
+| Testing | Vitest · supertest · 47 integration tests against a real DB |
 | CI/CD | GitHub Actions · Docker multi-stage builds · 3 Compose environments |
+
+---
+
+## Architecture
+
+```mermaid
+flowchart LR
+    U[Browser<br/>React 19 SPA] -- "JWT access token (memory)<br/>refresh token (HttpOnly cookie)" --> API
+    subgraph API[Express 5 API]
+        AUTH[auth<br/>Turnstile · rate limit · rotation]
+        AI[ai<br/>prompt builder · patch applier]
+        CRUD[presets · templates<br/>conversations · users]
+    end
+    AI -- "OpenAI-compatible SDK" --> DS[(DeepSeek<br/>V3 / R1)]
+    API --> PG[(PostgreSQL<br/>8 auto-run migrations)]
+```
+
+A chat request goes through: auth middleware → atomic paywall check (`UPDATE … WHERE ai_prompts_used < 1 RETURNING id`) → system prompt built from the selected company preset and Paraguay's mandatory invoice rules → DeepSeek → JSON parsed (with a fallback extractor for R1, which ignores JSON mode) → logo placeholder swapped for the stored base64 image → conversation and messages persisted.
+
+### How edit mode works
+
+The first message generates a full HTML template. Follow-up messages ("make the header blue") used to ask the model to re-emit the whole document with one change applied. That was slow, let the model drift and rewrite parts nobody asked about, and broke outright once a company logo was embedded: the base64 image alone can exceed the model's 8K-token output limit, so responses were truncated.
+
+Edit mode now asks the model for a list of `{ find, replace }` patches instead ([`ai.service.ts`](back-end/src/ai/ai.service.ts)). The backend applies them with exact string replacement, falling back to a whitespace-tolerant match that must be unique. If a patch doesn't match, the error is fed back to the model for one automatic retry. The logo never passes through the model's output.
+
+#### Benchmark: full regeneration vs. patches
+
+[`src/bench/benchmark-edits.ts`](back-end/src/bench/benchmark-edits.ts) generates one base template, then applies the same 10 edit requests with both approaches: the previous full-regeneration prompt (recovered verbatim from git history) and the current `chat()` code path. It repeats this with no logo and with two small embedded logos. Token counts come from the API's own usage field.
+
+Run on 2026-09-27 against `deepseek-chat`, `max_tokens` 8192 for both approaches ([raw results](back-end/bench-results/)):
+
+| Scenario | Approach | Edits applied | Output tokens (10 edits) | Median latency |
+|---|---|---|---|---|
+| No logo | Full regeneration | 10/10 | 35,712 | 9.1 s |
+| | **Patches** | **10/10** | **2,058** | **1.3 s** |
+| ~5 KB base64 logo | Full regeneration | 9/10 | 71,149 | 30.4 s |
+| | **Patches** | **10/10** | **1,863** | **1.4 s** |
+| ~9 KB base64 logo | Full regeneration | 0/10 (all truncated at the output limit) | 81,920 | 43.2 s |
+| | **Patches** | **9/10** | **2,059** | **1.4 s** |
+
+Overall, patches applied 29/30 edits vs. 19/30, using about 32× fewer output tokens. The one patch miss was the model replying with a message instead of an edit, not a failed match; none of the 30 patch runs needed the automatic retry. This is a single run with 10 requests per cell, so treat the numbers as indicative. Reproduce it with `cd back-end && pnpm bench:edits` (needs `DEEPSEEK_API_KEY`, costs a few cents).
 
 ---
 
@@ -103,12 +148,13 @@ You describe what you need ("professional invoice for a consulting service, dark
 
 ```bash
 # 1. Clone
-git clone https://github.com/pablolird/ai_template_builder.git
-cd ai_template_builder
+git clone https://github.com/pablolird/facturia.git
+cd facturia
 
 # 2. Copy and fill in environment variables
 cp back-end/.env.example back-end/.env
-# Edit back-end/.env — set DATABASE_URL, JWT secrets, and DEEPSEEK_API_KEY
+cp front-end/.env.example front-end/.env
+# Edit back-end/.env — set DATABASE_URL, JWT secrets, DEEPSEEK_API_KEY and TURNSTILE_SECRET_KEY
 
 # 3. Start everything
 ./dev.sh
@@ -124,8 +170,10 @@ cp back-end/.env.example back-end/.env
 | `JWT_ACCESS_SECRET` | Secret for 15-min access tokens |
 | `JWT_REFRESH_SECRET` | Secret for 7-day refresh tokens |
 | `DEEPSEEK_API_KEY` | From [platform.deepseek.com](https://platform.deepseek.com) |
+| `TURNSTILE_SECRET_KEY` | Cloudflare Turnstile secret (CAPTCHA verification) |
 | `CORS_ORIGIN` | Frontend origin (default: `http://localhost:3001`) |
 | `VITE_API_BASE_URL` | Backend URL for the frontend (set in `front-end/.env`) |
+| `VITE_TURNSTILE_SITE_KEY` | Turnstile site key (`front-end/.env`; the example file ships Cloudflare's always-pass test key) |
 
 Generate JWT secrets with:
 ```bash
@@ -137,14 +185,15 @@ node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
 ## Project structure
 
 ```
-ai_template_builder/
+facturia/
 ├── back-end/
 │   └── src/
 │       ├── auth/           Register, login, refresh, logout
 │       ├── presets/        Company presets (RUC, timbrado, logo)
 │       ├── templates/      Saved invoice templates
 │       ├── conversations/  AI chat history + messages
-│       ├── ai/             DeepSeek integration + system prompt
+│       ├── ai/             DeepSeek integration, system prompts, patch applier
+│       ├── bench/          Edit-mode benchmark (legacy vs. patch)
 │       ├── users/          Profile, password change, account deletion
 │       └── db/             pg pool + SQL migrations (auto-applied on startup)
 └── front-end/
@@ -159,7 +208,7 @@ ai_template_builder/
 
 ## Running tests
 
-The backend test suite hits a real Postgres instance. 43 integration tests cover auth, presets, templates, conversations, and AI (DeepSeek mocked).
+The backend test suite hits a real Postgres instance. 47 integration tests cover auth, presets, templates, conversations, AI chat (DeepSeek mocked), and the free-trial paywall — including a test that fires 10 concurrent requests and asserts exactly one gets through. CI runs type-check, lint and the full suite on every push.
 
 ```bash
 # Start a throwaway test DB

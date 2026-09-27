@@ -18,6 +18,7 @@
     "format:check": "prettier --check .",
     "test": "vitest run",
     "test:watch": "vitest",
+    "bench:edits": "tsx --env-file .env src/bench/benchmark-edits.ts",
     "docker:qa:up": "docker compose -f docker-compose.yml -f docker-compose.qa.yml --env-file .env.qa up --build",
     "docker:qa:down": "docker compose -f docker-compose.yml -f docker-compose.qa.yml --env-file .env.qa down",
     "docker:qa:logs": "docker compose -f docker-compose.yml -f docker-compose.qa.yml --env-file .env.qa logs -f",

@@ -1,0 +1,917 @@
+{
+  "meta": {
+    "date": "2026-09-27T21:05:25.081Z",
+    "model": "deepseek-chat",
+    "maxTokens": 8192,
+    "baseTemplateChars": 9654,
+    "logoBase64Chars": {
+      "no-logo": 114,
+      "with-logo": 5182,
+      "large-logo": 9090
+    },
+    "editRequests": 10
+  },
+  "results": [
+    {
+      "approach": "legacy-full-regeneration",
+      "scenario": "no-logo",
+      "request": "Change the header background color to dark navy blue.",
+      "success": true,
+      "logoPreserved": true,
+      "latencyMs": 9113,
+      "apiCalls": 1,
+      "promptTokens": 3860,
+      "completionTokens": 3568,
+      "finishReasons": [
+        "stop"
+      ],
+      "changedLines": 2
+    },
+    {
+      "approach": "patch-find-replace",
+      "scenario": "no-logo",
+      "request": "Change the header background color to dark navy blue.",
+      "success": true,
+      "logoPreserved": true,
+      "latencyMs": 1720,
+      "apiCalls": 1,
+      "promptTokens": 3630,
+      "completionTokens": 181,
+      "finishReasons": [
+        "stop"
+      ],
+      "changedLines": 1
+    },
+    {
+      "approach": "legacy-full-regeneration",
+      "scenario": "no-logo",
+      "request": "Change the default Condición de Venta from Contado to Crédito.",
+      "success": true,
+      "logoPreserved": true,
+      "latencyMs": 9030,
+      "apiCalls": 1,
+      "promptTokens": 3866,
+      "completionTokens": 3547,
+      "finishReasons": [
+        "stop"
+      ],
+      "changedLines": 2
+    },
+    {
+      "approach": "patch-find-replace",
+      "scenario": "no-logo",
+      "request": "Change the default Condición de Venta from Contado to Crédito.",
+      "success": true,
+      "logoPreserved": true,
+      "latencyMs": 1738,
+      "apiCalls": 1,
+      "promptTokens": 3636,
+      "completionTokens": 106,
+      "finishReasons": [
+        "stop"
+      ],
+      "changedLines": 2
+    },
+    {
+      "approach": "legacy-full-regeneration",
+      "scenario": "no-logo",
+      "request": "Make the company name in the header larger and bold.",
+      "success": true,
+      "logoPreserved": true,
+      "latencyMs": 9048,
+      "apiCalls": 1,
+      "promptTokens": 3861,
+      "completionTokens": 3560,
+      "finishReasons": [
+        "stop"
+      ],
+      "changedLines": 2
+    },
+    {
+      "approach": "patch-find-replace",
+      "scenario": "no-logo",
+      "request": "Make the company name in the header larger and bold.",
+      "success": true,
+      "logoPreserved": true,
+      "latencyMs": 1043,
+      "apiCalls": 1,
+      "promptTokens": 3631,
+      "completionTokens": 89,
+      "finishReasons": [
+        "stop"
+      ],
+      "changedLines": 4
+    },
+    {
+      "approach": "legacy-full-regeneration",
+      "scenario": "no-logo",
+      "request": "Rename the \"Descripción\" column header to \"Detalle\".",
+      "success": true,
+      "logoPreserved": true,
+      "latencyMs": 8997,
+      "apiCalls": 1,
+      "promptTokens": 3864,
+      "completionTokens": 3550,
+      "finishReasons": [
+        "stop"
+      ],
+      "changedLines": 2
+    },
+    {
+      "approach": "patch-find-replace",
+      "scenario": "no-logo",
+      "request": "Rename the \"Descripción\" column header to \"Detalle\".",
+      "success": true,
+      "logoPreserved": true,
+      "latencyMs": 939,
+      "apiCalls": 1,
+      "promptTokens": 3634,
+      "completionTokens": 44,
+      "finishReasons": [
+        "stop"
+      ],
+      "changedLines": 2
+    },
+    {
+      "approach": "legacy-full-regeneration",
+      "scenario": "no-logo",
+      "request": "Add a \"Vendedor: ________\" field below the customer information.",
+      "success": true,
+      "logoPreserved": true,
+      "latencyMs": 9264,
+      "apiCalls": 1,
+      "promptTokens": 3865,
+      "completionTokens": 3618,
+      "finishReasons": [
+        "stop"
+      ],
+      "changedLines": 4
+    },
+    {
+      "approach": "patch-find-replace",
+      "scenario": "no-logo",
+      "request": "Add a \"Vendedor: ________\" field below the customer information.",
+      "success": true,
+      "logoPreserved": true,
+      "latencyMs": 1178,
+      "apiCalls": 1,
+      "promptTokens": 3635,
+      "completionTokens": 127,
+      "finishReasons": [
+        "stop"
+      ],
+      "changedLines": 1
+    },
+    {
+      "approach": "legacy-full-regeneration",
+      "scenario": "no-logo",
+      "request": "Change the footer text to \"Gracias por su preferencia\".",
+      "success": true,
+      "logoPreserved": true,
+      "latencyMs": 9023,
+      "apiCalls": 1,
+      "promptTokens": 3863,
+      "completionTokens": 3544,
+      "finishReasons": [
+        "stop"
+      ],
+      "changedLines": 2
+    },
+    {
+      "approach": "patch-find-replace",
+      "scenario": "no-logo",
+      "request": "Change the footer text to \"Gracias por su preferencia\".",
+      "success": true,
+      "logoPreserved": true,
+      "latencyMs": 1067,
+      "apiCalls": 1,
+      "promptTokens": 3633,
+      "completionTokens": 59,
+      "finishReasons": [
+        "stop"
+      ],
+      "changedLines": 2
+    },
+    {
+      "approach": "legacy-full-regeneration",
+      "scenario": "no-logo",
+      "request": "Make the line-item table borders thin and light grey.",
+      "success": true,
+      "logoPreserved": true,
+      "latencyMs": 9113,
+      "apiCalls": 1,
+      "promptTokens": 3861,
+      "completionTokens": 3545,
+      "finishReasons": [
+        "stop"
+      ],
+      "changedLines": 2
+    },
+    {
+      "approach": "patch-find-replace",
+      "scenario": "no-logo",
+      "request": "Make the line-item table borders thin and light grey.",
+      "success": true,
+      "logoPreserved": true,
+      "latencyMs": 1429,
+      "apiCalls": 1,
+      "promptTokens": 3631,
+      "completionTokens": 293,
+      "finishReasons": [
+        "stop"
+      ],
+      "changedLines": 4
+    },
+    {
+      "approach": "legacy-full-regeneration",
+      "scenario": "no-logo",
+      "request": "Change the accent color used for headings to dark green.",
+      "success": true,
+      "logoPreserved": true,
+      "latencyMs": 9055,
+      "apiCalls": 1,
+      "promptTokens": 3861,
+      "completionTokens": 3499,
+      "finishReasons": [
+        "stop"
+      ],
+      "changedLines": 30
+    },
+    {
+      "approach": "patch-find-replace",
+      "scenario": "no-logo",
+      "request": "Change the accent color used for headings to dark green.",
+      "success": true,
+      "logoPreserved": true,
+      "latencyMs": 2792,
+      "apiCalls": 1,
+      "promptTokens": 3631,
+      "completionTokens": 753,
+      "finishReasons": [
+        "stop"
+      ],
+      "changedLines": 26
+    },
+    {
+      "approach": "legacy-full-regeneration",
+      "scenario": "no-logo",
+      "request": "Add a \"Notas\" box with an empty area at the bottom of the invoice.",
+      "success": true,
+      "logoPreserved": true,
+      "latencyMs": 9764,
+      "apiCalls": 1,
+      "promptTokens": 3868,
+      "completionTokens": 3757,
+      "finishReasons": [
+        "stop"
+      ],
+      "changedLines": 25
+    },
+    {
+      "approach": "patch-find-replace",
+      "scenario": "no-logo",
+      "request": "Add a \"Notas\" box with an empty area at the bottom of the invoice.",
+      "success": true,
+      "logoPreserved": true,
+      "latencyMs": 1755,
+      "apiCalls": 1,
+      "promptTokens": 3638,
+      "completionTokens": 327,
+      "finishReasons": [
+        "stop"
+      ],
+      "changedLines": 25
+    },
+    {
+      "approach": "legacy-full-regeneration",
+      "scenario": "no-logo",
+      "request": "Change the font of the whole document to Georgia, serif.",
+      "success": true,
+      "logoPreserved": true,
+      "latencyMs": 9129,
+      "apiCalls": 1,
+      "promptTokens": 3863,
+      "completionTokens": 3524,
+      "finishReasons": [
+        "stop"
+      ],
+      "changedLines": 2
+    },
+    {
+      "approach": "patch-find-replace",
+      "scenario": "no-logo",
+      "request": "Change the font of the whole document to Georgia, serif.",
+      "success": true,
+      "logoPreserved": true,
+      "latencyMs": 1188,
+      "apiCalls": 1,
+      "promptTokens": 3633,
+      "completionTokens": 79,
+      "finishReasons": [
+        "stop"
+      ],
+      "changedLines": 2
+    },
+    {
+      "approach": "legacy-full-regeneration",
+      "scenario": "with-logo",
+      "request": "Change the header background color to dark navy blue.",
+      "success": true,
+      "logoPreserved": true,
+      "latencyMs": 30552,
+      "apiCalls": 1,
+      "promptTokens": 7405,
+      "completionTokens": 7106,
+      "finishReasons": [
+        "stop"
+      ],
+      "changedLines": 1
+    },
+    {
+      "approach": "patch-find-replace",
+      "scenario": "with-logo",
+      "request": "Change the header background color to dark navy blue.",
+      "success": true,
+      "logoPreserved": true,
+      "latencyMs": 1563,
+      "apiCalls": 1,
+      "promptTokens": 7175,
+      "completionTokens": 180,
+      "finishReasons": [
+        "stop"
+      ],
+      "changedLines": 1
+    },
+    {
+      "approach": "legacy-full-regeneration",
+      "scenario": "with-logo",
+      "request": "Change the default Condición de Venta from Contado to Crédito.",
+      "success": true,
+      "logoPreserved": true,
+      "latencyMs": 30328,
+      "apiCalls": 1,
+      "promptTokens": 7411,
+      "completionTokens": 7096,
+      "finishReasons": [
+        "stop"
+      ],
+      "changedLines": 2
+    },
+    {
+      "approach": "patch-find-replace",
+      "scenario": "with-logo",
+      "request": "Change the default Condición de Venta from Contado to Crédito.",
+      "success": true,
+      "logoPreserved": true,
+      "latencyMs": 1155,
+      "apiCalls": 1,
+      "promptTokens": 7181,
+      "completionTokens": 90,
+      "finishReasons": [
+        "stop"
+      ],
+      "changedLines": 2
+    },
+    {
+      "approach": "legacy-full-regeneration",
+      "scenario": "with-logo",
+      "request": "Make the company name in the header larger and bold.",
+      "success": true,
+      "logoPreserved": true,
+      "latencyMs": 30330,
+      "apiCalls": 1,
+      "promptTokens": 7406,
+      "completionTokens": 7089,
+      "finishReasons": [
+        "stop"
+      ],
+      "changedLines": 4
+    },
+    {
+      "approach": "patch-find-replace",
+      "scenario": "with-logo",
+      "request": "Make the company name in the header larger and bold.",
+      "success": true,
+      "logoPreserved": true,
+      "latencyMs": 1158,
+      "apiCalls": 1,
+      "promptTokens": 7176,
+      "completionTokens": 74,
+      "finishReasons": [
+        "stop"
+      ],
+      "changedLines": 4
+    },
+    {
+      "approach": "legacy-full-regeneration",
+      "scenario": "with-logo",
+      "request": "Rename the \"Descripción\" column header to \"Detalle\".",
+      "success": true,
+      "logoPreserved": true,
+      "latencyMs": 30537,
+      "apiCalls": 1,
+      "promptTokens": 7409,
+      "completionTokens": 7094,
+      "finishReasons": [
+        "stop"
+      ],
+      "changedLines": 2
+    },
+    {
+      "approach": "patch-find-replace",
+      "scenario": "with-logo",
+      "request": "Rename the \"Descripción\" column header to \"Detalle\".",
+      "success": true,
+      "logoPreserved": true,
+      "latencyMs": 1517,
+      "apiCalls": 1,
+      "promptTokens": 7179,
+      "completionTokens": 67,
+      "finishReasons": [
+        "stop"
+      ],
+      "changedLines": 2
+    },
+    {
+      "approach": "legacy-full-regeneration",
+      "scenario": "with-logo",
+      "request": "Add a \"Vendedor: ________\" field below the customer information.",
+      "success": true,
+      "logoPreserved": true,
+      "latencyMs": 30739,
+      "apiCalls": 1,
+      "promptTokens": 7410,
+      "completionTokens": 7168,
+      "finishReasons": [
+        "stop"
+      ],
+      "changedLines": 5
+    },
+    {
+      "approach": "patch-find-replace",
+      "scenario": "with-logo",
+      "request": "Add a \"Vendedor: ________\" field below the customer information.",
+      "success": true,
+      "logoPreserved": true,
+      "latencyMs": 1276,
+      "apiCalls": 1,
+      "promptTokens": 7180,
+      "completionTokens": 122,
+      "finishReasons": [
+        "stop"
+      ],
+      "changedLines": 1
+    },
+    {
+      "approach": "legacy-full-regeneration",
+      "scenario": "with-logo",
+      "request": "Change the footer text to \"Gracias por su preferencia\".",
+      "success": true,
+      "logoPreserved": true,
+      "latencyMs": 30618,
+      "apiCalls": 1,
+      "promptTokens": 7408,
+      "completionTokens": 7058,
+      "finishReasons": [
+        "stop"
+      ],
+      "changedLines": 3
+    },
+    {
+      "approach": "patch-find-replace",
+      "scenario": "with-logo",
+      "request": "Change the footer text to \"Gracias por su preferencia\".",
+      "success": true,
+      "logoPreserved": true,
+      "latencyMs": 1204,
+      "apiCalls": 1,
+      "promptTokens": 7178,
+      "completionTokens": 99,
+      "finishReasons": [
+        "stop"
+      ],
+      "changedLines": 3
+    },
+    {
+      "approach": "legacy-full-regeneration",
+      "scenario": "with-logo",
+      "request": "Make the line-item table borders thin and light grey.",
+      "success": false,
+      "logoPreserved": true,
+      "latencyMs": 30456,
+      "apiCalls": 1,
+      "promptTokens": 7406,
+      "completionTokens": 7089,
+      "finishReasons": [
+        "stop"
+      ],
+      "failure": "template unchanged",
+      "changedLines": 0
+    },
+    {
+      "approach": "patch-find-replace",
+      "scenario": "with-logo",
+      "request": "Make the line-item table borders thin and light grey.",
+      "success": true,
+      "logoPreserved": true,
+      "latencyMs": 1349,
+      "apiCalls": 1,
+      "promptTokens": 7176,
+      "completionTokens": 89,
+      "finishReasons": [
+        "stop"
+      ],
+      "changedLines": 2
+    },
+    {
+      "approach": "legacy-full-regeneration",
+      "scenario": "with-logo",
+      "request": "Change the accent color used for headings to dark green.",
+      "success": true,
+      "logoPreserved": true,
+      "latencyMs": 30017,
+      "apiCalls": 1,
+      "promptTokens": 7406,
+      "completionTokens": 7079,
+      "finishReasons": [
+        "stop"
+      ],
+      "changedLines": 22
+    },
+    {
+      "approach": "patch-find-replace",
+      "scenario": "with-logo",
+      "request": "Change the accent color used for headings to dark green.",
+      "success": true,
+      "logoPreserved": true,
+      "latencyMs": 2893,
+      "apiCalls": 1,
+      "promptTokens": 7176,
+      "completionTokens": 746,
+      "finishReasons": [
+        "stop"
+      ],
+      "changedLines": 26
+    },
+    {
+      "approach": "legacy-full-regeneration",
+      "scenario": "with-logo",
+      "request": "Add a \"Notas\" box with an empty area at the bottom of the invoice.",
+      "success": true,
+      "logoPreserved": true,
+      "latencyMs": 30369,
+      "apiCalls": 1,
+      "promptTokens": 7413,
+      "completionTokens": 7325,
+      "finishReasons": [
+        "stop"
+      ],
+      "changedLines": 28
+    },
+    {
+      "approach": "patch-find-replace",
+      "scenario": "with-logo",
+      "request": "Add a \"Notas\" box with an empty area at the bottom of the invoice.",
+      "success": true,
+      "logoPreserved": true,
+      "latencyMs": 1856,
+      "apiCalls": 1,
+      "promptTokens": 7183,
+      "completionTokens": 324,
+      "finishReasons": [
+        "stop"
+      ],
+      "changedLines": 25
+    },
+    {
+      "approach": "legacy-full-regeneration",
+      "scenario": "with-logo",
+      "request": "Change the font of the whole document to Georgia, serif.",
+      "success": true,
+      "logoPreserved": true,
+      "latencyMs": 29948,
+      "apiCalls": 1,
+      "promptTokens": 7408,
+      "completionTokens": 7045,
+      "finishReasons": [
+        "stop"
+      ],
+      "changedLines": 3
+    },
+    {
+      "approach": "patch-find-replace",
+      "scenario": "with-logo",
+      "request": "Change the font of the whole document to Georgia, serif.",
+      "success": true,
+      "logoPreserved": true,
+      "latencyMs": 1408,
+      "apiCalls": 1,
+      "promptTokens": 7178,
+      "completionTokens": 72,
+      "finishReasons": [
+        "stop"
+      ],
+      "changedLines": 2
+    },
+    {
+      "approach": "legacy-full-regeneration",
+      "scenario": "large-logo",
+      "request": "Change the header background color to dark navy blue.",
+      "success": false,
+      "logoPreserved": false,
+      "latencyMs": 43168,
+      "apiCalls": 1,
+      "promptTokens": 10164,
+      "completionTokens": 8192,
+      "finishReasons": [
+        "length"
+      ],
+      "failure": "truncated at output limit"
+    },
+    {
+      "approach": "patch-find-replace",
+      "scenario": "large-logo",
+      "request": "Change the header background color to dark navy blue.",
+      "success": false,
+      "logoPreserved": false,
+      "latencyMs": 1575,
+      "apiCalls": 1,
+      "promptTokens": 9934,
+      "completionTokens": 153,
+      "finishReasons": [
+        "stop"
+      ],
+      "failure": "no templateHtml in response"
+    },
+    {
+      "approach": "legacy-full-regeneration",
+      "scenario": "large-logo",
+      "request": "Change the default Condición de Venta from Contado to Crédito.",
+      "success": false,
+      "logoPreserved": false,
+      "latencyMs": 43275,
+      "apiCalls": 1,
+      "promptTokens": 10170,
+      "completionTokens": 8192,
+      "finishReasons": [
+        "length"
+      ],
+      "failure": "truncated at output limit"
+    },
+    {
+      "approach": "patch-find-replace",
+      "scenario": "large-logo",
+      "request": "Change the default Condición de Venta from Contado to Crédito.",
+      "success": true,
+      "logoPreserved": true,
+      "latencyMs": 1285,
+      "apiCalls": 1,
+      "promptTokens": 9940,
+      "completionTokens": 86,
+      "finishReasons": [
+        "stop"
+      ],
+      "changedLines": 2
+    },
+    {
+      "approach": "legacy-full-regeneration",
+      "scenario": "large-logo",
+      "request": "Make the company name in the header larger and bold.",
+      "success": false,
+      "logoPreserved": false,
+      "latencyMs": 43355,
+      "apiCalls": 1,
+      "promptTokens": 10165,
+      "completionTokens": 8192,
+      "finishReasons": [
+        "length"
+      ],
+      "failure": "truncated at output limit"
+    },
+    {
+      "approach": "patch-find-replace",
+      "scenario": "large-logo",
+      "request": "Make the company name in the header larger and bold.",
+      "success": true,
+      "logoPreserved": true,
+      "latencyMs": 1003,
+      "apiCalls": 1,
+      "promptTokens": 9935,
+      "completionTokens": 80,
+      "finishReasons": [
+        "stop"
+      ],
+      "changedLines": 4
+    },
+    {
+      "approach": "legacy-full-regeneration",
+      "scenario": "large-logo",
+      "request": "Rename the \"Descripción\" column header to \"Detalle\".",
+      "success": false,
+      "logoPreserved": false,
+      "latencyMs": 43051,
+      "apiCalls": 1,
+      "promptTokens": 10168,
+      "completionTokens": 8192,
+      "finishReasons": [
+        "length"
+      ],
+      "failure": "truncated at output limit"
+    },
+    {
+      "approach": "patch-find-replace",
+      "scenario": "large-logo",
+      "request": "Rename the \"Descripción\" column header to \"Detalle\".",
+      "success": true,
+      "logoPreserved": true,
+      "latencyMs": 1385,
+      "apiCalls": 1,
+      "promptTokens": 9938,
+      "completionTokens": 67,
+      "finishReasons": [
+        "stop"
+      ],
+      "changedLines": 2
+    },
+    {
+      "approach": "legacy-full-regeneration",
+      "scenario": "large-logo",
+      "request": "Add a \"Vendedor: ________\" field below the customer information.",
+      "success": false,
+      "logoPreserved": false,
+      "latencyMs": 43141,
+      "apiCalls": 1,
+      "promptTokens": 10169,
+      "completionTokens": 8192,
+      "finishReasons": [
+        "length"
+      ],
+      "failure": "truncated at output limit"
+    },
+    {
+      "approach": "patch-find-replace",
+      "scenario": "large-logo",
+      "request": "Add a \"Vendedor: ________\" field below the customer information.",
+      "success": true,
+      "logoPreserved": true,
+      "latencyMs": 1393,
+      "apiCalls": 1,
+      "promptTokens": 9939,
+      "completionTokens": 146,
+      "finishReasons": [
+        "stop"
+      ],
+      "changedLines": 5
+    },
+    {
+      "approach": "legacy-full-regeneration",
+      "scenario": "large-logo",
+      "request": "Change the footer text to \"Gracias por su preferencia\".",
+      "success": false,
+      "logoPreserved": false,
+      "latencyMs": 42958,
+      "apiCalls": 1,
+      "promptTokens": 10167,
+      "completionTokens": 8192,
+      "finishReasons": [
+        "length"
+      ],
+      "failure": "truncated at output limit"
+    },
+    {
+      "approach": "patch-find-replace",
+      "scenario": "large-logo",
+      "request": "Change the footer text to \"Gracias por su preferencia\".",
+      "success": true,
+      "logoPreserved": true,
+      "latencyMs": 1356,
+      "apiCalls": 1,
+      "promptTokens": 9937,
+      "completionTokens": 66,
+      "finishReasons": [
+        "stop"
+      ],
+      "changedLines": 2
+    },
+    {
+      "approach": "legacy-full-regeneration",
+      "scenario": "large-logo",
+      "request": "Make the line-item table borders thin and light grey.",
+      "success": false,
+      "logoPreserved": false,
+      "latencyMs": 43172,
+      "apiCalls": 1,
+      "promptTokens": 10165,
+      "completionTokens": 8192,
+      "finishReasons": [
+        "length"
+      ],
+      "failure": "truncated at output limit"
+    },
+    {
+      "approach": "patch-find-replace",
+      "scenario": "large-logo",
+      "request": "Make the line-item table borders thin and light grey.",
+      "success": true,
+      "logoPreserved": true,
+      "latencyMs": 1841,
+      "apiCalls": 1,
+      "promptTokens": 9935,
+      "completionTokens": 313,
+      "finishReasons": [
+        "stop"
+      ],
+      "changedLines": 4
+    },
+    {
+      "approach": "legacy-full-regeneration",
+      "scenario": "large-logo",
+      "request": "Change the accent color used for headings to dark green.",
+      "success": false,
+      "logoPreserved": false,
+      "latencyMs": 43896,
+      "apiCalls": 1,
+      "promptTokens": 10165,
+      "completionTokens": 8192,
+      "finishReasons": [
+        "length"
+      ],
+      "failure": "truncated at output limit"
+    },
+    {
+      "approach": "patch-find-replace",
+      "scenario": "large-logo",
+      "request": "Change the accent color used for headings to dark green.",
+      "success": true,
+      "logoPreserved": true,
+      "latencyMs": 2998,
+      "apiCalls": 1,
+      "promptTokens": 9935,
+      "completionTokens": 835,
+      "finishReasons": [
+        "stop"
+      ],
+      "changedLines": 28
+    },
+    {
+      "approach": "legacy-full-regeneration",
+      "scenario": "large-logo",
+      "request": "Add a \"Notas\" box with an empty area at the bottom of the invoice.",
+      "success": false,
+      "logoPreserved": false,
+      "latencyMs": 42952,
+      "apiCalls": 1,
+      "promptTokens": 10172,
+      "completionTokens": 8192,
+      "finishReasons": [
+        "length"
+      ],
+      "failure": "truncated at output limit"
+    },
+    {
+      "approach": "patch-find-replace",
+      "scenario": "large-logo",
+      "request": "Add a \"Notas\" box with an empty area at the bottom of the invoice.",
+      "success": true,
+      "logoPreserved": true,
+      "latencyMs": 1318,
+      "apiCalls": 1,
+      "promptTokens": 9942,
+      "completionTokens": 237,
+      "finishReasons": [
+        "stop"
+      ],
+      "changedLines": 6
+    },
+    {
+      "approach": "legacy-full-regeneration",
+      "scenario": "large-logo",
+      "request": "Change the font of the whole document to Georgia, serif.",
+      "success": false,
+      "logoPreserved": false,
+      "latencyMs": 43233,
+      "apiCalls": 1,
+      "promptTokens": 10167,
+      "completionTokens": 8192,
+      "finishReasons": [
+        "length"
+      ],
+      "failure": "truncated at output limit"
+    },
+    {
+      "approach": "patch-find-replace",
+      "scenario": "large-logo",
+      "request": "Change the font of the whole document to Georgia, serif.",
+      "success": true,
+      "logoPreserved": true,
+      "latencyMs": 1175,
+      "apiCalls": 1,
+      "promptTokens": 9937,
+      "completionTokens": 76,
+      "finishReasons": [
+        "stop"
+      ],
+      "changedLines": 2
+    }
+  ]
+}
