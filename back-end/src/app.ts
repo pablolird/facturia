@@ -13,8 +13,9 @@ import usersRouter from './users/users.router.js';
 
 const app: Express = express();
 
-// Number of reverse proxies in front of the app (e.g. Vercel rewrite + Render load balancer),
-// so req.ip — and therefore the auth rate limiters — see the real client IP
+// Reverse proxies between the client and the app (Render: Cloudflare + internal LB + local
+// proxy = 3), so req.ip is the connecting client. See clientKey() in auth.router for traffic
+// that arrives through the Vercel /api rewrite.
 app.set('trust proxy', Number(process.env['TRUST_PROXY_HOPS'] ?? 0));
 
 app.use(helmet());
@@ -31,22 +32,6 @@ app.use(express.json({ limit: '2mb' }));
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', env: process.env['NODE_ENV'] ?? 'development' });
 });
-
-// TEMPORARY: measures the proxy chain to calibrate TRUST_PROXY_HOPS; removed right after
-if (process.env['PROXY_DEBUG'] === '1') {
-  app.get('/proxy-debug', (req, res) => {
-    res.json({
-      ip: req.ip,
-      ips: req.ips,
-      xff: req.headers['x-forwarded-for'],
-      xRealIp: req.headers['x-real-ip'],
-      xVercelForwardedFor: req.headers['x-vercel-forwarded-for'],
-      cfConnectingIp: req.headers['cf-connecting-ip'],
-      trueClientIp: req.headers['true-client-ip'],
-      socket: req.socket.remoteAddress,
-    });
-  });
-}
 
 app.use('/auth', authRouter);
 app.use('/conversations', conversationsRouter);
