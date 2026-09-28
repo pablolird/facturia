@@ -16,7 +16,7 @@
 ![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker&logoColor=white)
 ![TailwindCSS](https://img.shields.io/badge/Tailwind_v4-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white)
 
-https://github.com/user-attachments/assets/91763d27-c605-4bfc-83c2-e2651d723fa4
+https://github.com/user-attachments/assets/dc8e4066-6ac6-4547-a43e-d50d3cf2720b
 
 </div>
 
