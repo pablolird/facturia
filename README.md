@@ -228,6 +228,20 @@ docker stop test_db && docker rm test_db
 
 ## Deployment
 
+The live demo runs on free tiers:
+
+| Piece | Where | Notes |
+|---|---|---|
+| Frontend | Vercel | Static Vite build; `vercel.json` rewrites `/api/*` to the backend |
+| Backend | Render (Docker, `back-end/Dockerfile`) | Auto-deploys from `master`; migrations run on startup |
+| Database | Neon Postgres | `DATABASE_URL` with `sslmode=verify-full` |
+
+The `/api` rewrite makes the API same-origin with the frontend, so the refresh-token cookie is first-party and sessions survive reloads even in browsers that block third-party cookies. Behind that chain the backend sets `TRUST_PROXY_HOPS=3` (Cloudflare + Render's load balancer + local proxy), and the auth rate limiters key on Vercel's `x-vercel-forwarded-for` header, because the head of `X-Forwarded-For` is client-supplied when requests come through the rewrite.
+
+Render's free tier sleeps after 15 minutes idle, so a small external pinger hits `/health` every 10 minutes to keep the demo responsive.
+
+### Self-hosting with Docker Compose
+
 Docker Compose files are included for QA and production environments:
 
 ```bash

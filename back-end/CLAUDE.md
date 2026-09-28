@@ -101,6 +101,7 @@ Multi-stage `Dockerfile` (builder → runner). SQL migration files are not emitt
 | `PORT` | Server port (default: `3000`) |
 | `DEEPSEEK_API_KEY` | DeepSeek API key for AI features |
 | `TURNSTILE_SECRET_KEY` | Cloudflare Turnstile secret key, verifies the login CAPTCHA |
+| `TRUST_PROXY_HOPS` | Reverse proxies in front of the app (`0` locally, `3` on Render); auth rate limiters also read Vercel's `x-vercel-forwarded-for` |
 
 Copy `.env.example` → `.env` for local dev. Docker environments use `.env.qa` / `.env.prod`.
 
