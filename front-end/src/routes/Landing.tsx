@@ -279,7 +279,7 @@ function LandingNav() {
           <Link to="/login" className="hidden sm:block text-sm text-muted-foreground hover:text-foreground transition-colors px-3 py-2">
             {t("navSignIn")}
           </Link>
-          <Link to="/login" className="inline-flex items-center justify-center h-9 px-4 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors">
+          <Link to="/sign-up" className="inline-flex items-center justify-center h-9 px-4 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors">
             {t("navCta")}
           </Link>
         </div>
@@ -314,7 +314,7 @@ function HeroSection() {
         </p>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-          <Link to="/login" className="inline-flex items-center justify-center h-12 px-8 rounded-xl bg-primary text-primary-foreground text-base font-semibold hover:bg-primary/90 transition-colors shadow-lg shadow-primary/25">
+          <Link to="/sign-up" className="inline-flex items-center justify-center h-12 px-8 rounded-xl bg-primary text-primary-foreground text-base font-semibold hover:bg-primary/90 transition-colors shadow-lg shadow-primary/25">
             {t("startFree")}
           </Link>
           <a href="#demo" className="inline-flex items-center justify-center h-12 px-8 rounded-xl border border-border text-base font-medium hover:bg-accent transition-colors">
@@ -439,7 +439,7 @@ function CTASection() {
       <div className="mx-auto max-w-3xl text-center">
         <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-4">{t("ctaTitle")}</h2>
         <p className="text-muted-foreground text-lg mb-10 max-w-xl mx-auto">{t("ctaDesc")}</p>
-        <Link to="/login" className="inline-flex items-center justify-center h-14 px-10 rounded-xl bg-primary text-primary-foreground text-lg font-semibold hover:bg-primary/90 transition-colors shadow-xl shadow-primary/20">
+        <Link to="/sign-up" className="inline-flex items-center justify-center h-14 px-10 rounded-xl bg-primary text-primary-foreground text-lg font-semibold hover:bg-primary/90 transition-colors shadow-xl shadow-primary/20">
           {t("ctaBtn")}
         </Link>
         <p className="text-sm text-muted-foreground mt-6">{t("ctaNote")}</p>
@@ -461,7 +461,7 @@ function LandingFooter() {
         <p className="text-sm text-muted-foreground">© {new Date().getFullYear()} Facturia. {t("footerLine")}</p>
         <div className="flex items-center gap-6 text-sm text-muted-foreground">
           <Link to="/login" className="hover:text-foreground transition-colors">{t("footerSignIn")}</Link>
-          <Link to="/login" className="hover:text-foreground transition-colors">{t("footerRegister")}</Link>
+          <Link to="/sign-up" className="hover:text-foreground transition-colors">{t("footerRegister")}</Link>
         </div>
       </div>
     </footer>

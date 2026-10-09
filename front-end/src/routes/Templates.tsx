@@ -3,7 +3,6 @@ import { useNavigate } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { FileText, Loader2 } from "lucide-react";
 
-import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
 import { deleteTemplate, fetchTemplates } from "@/lib/api";
 import { toast } from "sonner";
@@ -16,22 +15,19 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 
 export default function Templates() {
   const navigate = useNavigate();
-  const { getAccessToken } = useAuth();
   const { t } = useLanguage();
   const queryClient = useQueryClient();
-  const token = getAccessToken();
   const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
 
   const { data: templates = [], isLoading } = useQuery({
     queryKey: ["templates"],
-    queryFn: () => fetchTemplates(token!),
-    enabled: !!token,
+    queryFn: () => fetchTemplates(),
   });
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       setDeletingIds((prev) => new Set(prev).add(id));
-      await deleteTemplate(token!, id);
+      await deleteTemplate(id);
       return id;
     },
     onSuccess: (id) => {

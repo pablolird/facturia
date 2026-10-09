@@ -1,156 +1,115 @@
-import { randomUUID } from 'node:crypto';
-
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-
 import pool from '../db/db.js';
 import { createPreset } from '../presets/presets.service.js';
-import type { InternalSession, JwtAccessPayload, JwtRefreshPayload, User } from './auth.types.js';
+import type { ClerkIdentity, User } from './auth.types.js';
 
-const ACCESS_TOKEN_EXPIRY = '15m';
-const REFRESH_TOKEN_EXPIRY = '7d';
-const REFRESH_TOKEN_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
+const USER_COLUMNS = 'id, username, email, role';
+const USERNAME_MAX = 50;
 
-// Hash of an arbitrary fixed string (cost 12, matching registerUser) — compared against
-// on an unknown email so the response takes as long as a real wrong-password attempt,
-// preventing timing-based user enumeration.
-const DUMMY_PASSWORD_HASH = '$2b$12$eSybImJVoqubIWUysvhrC.Lv/pLYgXhQlTrMJ6ik2t5X6t0E.pwT6';
-
-function requireEnv(name: string): string {
-  const value = process.env[name];
-  if (!value) throw new Error(`Missing required env var: ${name}`);
-  return value;
+export class UnverifiedEmailError extends Error {
+  constructor() {
+    super('email_not_verified');
+    this.name = 'UnverifiedEmailError';
+  }
 }
 
-export async function registerUser(
-  username: string,
-  email: string,
-  password: string,
-): Promise<User> {
-  const passwordHash = await bcrypt.hash(password, 12);
+// The email belongs to a local account already linked to a different Clerk user
+export class AccountConflictError extends Error {
+  constructor() {
+    super('account_conflict');
+    this.name = 'AccountConflictError';
+  }
+}
+
+export async function findUserByClerkId(clerkUserId: string): Promise<User | null> {
   const { rows } = await pool.query<User>(
-    `INSERT INTO users (username, email, password_hash)
-     VALUES ($1, $2, $3)
-     RETURNING id, username, email, role, created_at AS "createdAt", updated_at AS "updatedAt"`,
-    [username.trim(), email.toLowerCase().trim(), passwordHash],
+    `SELECT ${USER_COLUMNS} FROM users WHERE clerk_user_id = $1`,
+    [clerkUserId],
   );
-  const user = rows[0]!;
-
-  await createPreset(user.id, {
-    name: 'Empresa Demo',
-    business_name: 'Empresa Demo S.A.',
-    ruc: '80000000-0',
-    timbrado: '12345678',
-    address: 'Av. España 123',
-    city: 'Asunción',
-    phone: '+595 21 000000',
-    email: 'demo@empresa.com.py',
-  });
-
-  return user;
+  return rows[0] ?? null;
 }
 
-export async function loginUser(email: string, password: string): Promise<InternalSession | null> {
-  const { rows } = await pool.query<{
-    id: string;
-    username: string;
-    email: string;
-    role: 'admin' | 'user';
-    password_hash: string;
-  }>('SELECT id, username, email, role, password_hash FROM users WHERE email = $1', [
-    email.toLowerCase().trim(),
-  ]);
-  const user = rows[0];
-
-  // Always run bcrypt.compare, even for an unknown email, so response timing
-  // doesn't reveal whether the email is registered
-  const valid = await bcrypt.compare(password, user?.password_hash ?? DUMMY_PASSWORD_HASH);
-  if (!user || !valid) return null;
-
-  return issueTokenPair(user.id, user.username, user.email, user.role);
+function displayName(identity: ClerkIdentity, email: string): string {
+  const name = identity.name || email.split('@')[0]!;
+  return name.slice(0, USERNAME_MAX);
 }
 
-export async function createSessionForUser(
-  userId: string,
-  username: string,
-  email: string,
-  role: 'admin' | 'user' = 'user',
-): Promise<InternalSession> {
-  return issueTokenPair(userId, username, email, role);
-}
+// Creates (or links) the local user for a Clerk account. Safe to call concurrently and repeatedly:
+// the first request after sign-up and the user.created webhook may race. Only verified emails are
+// accepted, because the email is what ties a person to their single free trial.
+export async function provisionUser(identity: ClerkIdentity): Promise<User> {
+  const existing = await findUserByClerkId(identity.clerkUserId);
+  if (existing) return existing;
 
-export async function refreshTokens(incomingToken: string): Promise<InternalSession | null> {
-  let payload: JwtRefreshPayload;
+  if (!identity.email || !identity.emailVerified) throw new UnverifiedEmailError();
+  const email = identity.email.toLowerCase();
+
+  const client = await pool.connect();
   try {
-    payload = jwt.verify(incomingToken, requireEnv('JWT_REFRESH_SECRET'), {
-      algorithms: ['HS256'],
-    }) as JwtRefreshPayload;
-  } catch {
-    return null;
-  }
+    await client.query('BEGIN');
 
-  if (payload.type !== 'refresh') return null;
+    // An account from before the Clerk migration: link it so the user keeps their data
+    const linked = await client.query<User>(
+      `UPDATE users SET clerk_user_id = $1, updated_at = NOW()
+       WHERE email = $2 AND clerk_user_id IS NULL
+       RETURNING ${USER_COLUMNS}`,
+      [identity.clerkUserId, email],
+    );
+    if (linked.rows[0]) {
+      await client.query('COMMIT');
+      return linked.rows[0];
+    }
 
-  // Rotate: delete the old token and issue a new pair (prevents replay attacks)
-  const { rows } = await pool.query<{ user_id: string }>(
-    `DELETE FROM refresh_tokens WHERE jti = $1 AND expires_at > NOW() RETURNING user_id`,
-    [payload.jti],
-  );
-  if (!rows[0]) return null;
+    const inserted = await client.query<User>(
+      `INSERT INTO users (clerk_user_id, email, username)
+       VALUES ($1, $2, $3)
+       ON CONFLICT DO NOTHING
+       RETURNING ${USER_COLUMNS}`,
+      [identity.clerkUserId, email, displayName(identity, email)],
+    );
+    const user = inserted.rows[0];
+    if (!user) {
+      // Lost a race with a concurrent provision for the same Clerk user, or the email is taken
+      await client.query('ROLLBACK');
+      const raced = await findUserByClerkId(identity.clerkUserId);
+      if (raced) return raced;
+      throw new AccountConflictError();
+    }
 
-  const { rows: userRows } = await pool.query<{ username: string; email: string; role: 'admin' | 'user' }>(
-    'SELECT username, email, role FROM users WHERE id = $1',
-    [rows[0].user_id],
-  );
-  if (!userRows[0]) return null;
+    await createPreset(
+      user.id,
+      {
+        name: 'Empresa Demo',
+        business_name: 'Empresa Demo S.A.',
+        ruc: '80000000-0',
+        timbrado: '12345678',
+        address: 'Av. España 123',
+        city: 'Asunción',
+        phone: '+595 21 000000',
+        email: 'demo@empresa.com.py',
+      },
+      client,
+    );
 
-  return issueTokenPair(rows[0].user_id, userRows[0].username, userRows[0].email, userRows[0].role);
-}
-
-export async function revokeRefreshToken(incomingToken: string): Promise<void> {
-  let payload: JwtRefreshPayload;
-  try {
-    payload = jwt.verify(incomingToken, requireEnv('JWT_REFRESH_SECRET'), {
-      algorithms: ['HS256'],
-    }) as JwtRefreshPayload;
-  } catch {
-    return;
-  }
-  await pool.query('DELETE FROM refresh_tokens WHERE jti = $1', [payload.jti]);
-}
-
-export function verifyAccessToken(token: string): JwtAccessPayload | null {
-  try {
-    const payload = jwt.verify(token, requireEnv('JWT_ACCESS_SECRET'), {
-      algorithms: ['HS256'],
-    }) as JwtAccessPayload;
-    if (payload.type !== 'access') return null;
-    return payload;
-  } catch {
-    return null;
+    await client.query('COMMIT');
+    return user;
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw err;
+  } finally {
+    client.release();
   }
 }
 
-async function issueTokenPair(userId: string, username: string, email: string, role: 'admin' | 'user'): Promise<InternalSession> {
-  const jti = randomUUID();
-  const expiresAt = new Date(Date.now() + REFRESH_TOKEN_EXPIRY_MS);
+// Keeps the local email in sync when the user changes their primary address in Clerk
+export async function syncUserEmail(identity: ClerkIdentity): Promise<void> {
+  if (!identity.email || !identity.emailVerified) return;
+  await pool.query(
+    `UPDATE users SET email = $1, updated_at = NOW()
+     WHERE clerk_user_id = $2 AND email <> $1`,
+    [identity.email.toLowerCase(), identity.clerkUserId],
+  );
+}
 
-  await pool.query('INSERT INTO refresh_tokens (user_id, jti, expires_at) VALUES ($1, $2, $3)', [
-    userId,
-    jti,
-    expiresAt,
-  ]);
-
-  const accessPayload: JwtAccessPayload = { userId, username, email, role, type: 'access' };
-  const refreshPayload: JwtRefreshPayload = { userId, jti, type: 'refresh' };
-
-  const accessToken = jwt.sign(accessPayload, requireEnv('JWT_ACCESS_SECRET'), {
-    expiresIn: ACCESS_TOKEN_EXPIRY,
-  });
-
-  const refreshToken = jwt.sign(refreshPayload, requireEnv('JWT_REFRESH_SECRET'), {
-    expiresIn: REFRESH_TOKEN_EXPIRY,
-  });
-
-  return { accessToken, refreshToken, user: { id: userId, username, email, role } };
+export async function deleteUserByClerkId(clerkUserId: string): Promise<void> {
+  await pool.query('DELETE FROM users WHERE clerk_user_id = $1', [clerkUserId]);
 }

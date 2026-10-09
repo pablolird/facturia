@@ -1,3 +1,5 @@
+import { getToken } from "@clerk/react";
+
 const API_BASE = import.meta.env.VITE_API_BASE_URL as string;
 
 export class PaywallError extends Error {
@@ -7,37 +9,24 @@ export class PaywallError extends Error {
   }
 }
 
-export interface SessionData {
-  access_token: string;
-  user: { id: string; email: string; name: string };
-}
-
-type RefreshCallback = (session: SessionData) => void;
-let onRefreshed: RefreshCallback | null = null;
-export function setRefreshCallback(fn: RefreshCallback) { onRefreshed = fn; }
-
-let inflightRefresh: Promise<SessionData> | null = null;
-
-async function refreshSession(): Promise<SessionData> {
-  if (!inflightRefresh) {
-    inflightRefresh = fetch(`${API_BASE}/auth/refresh`, {
-      method: "POST",
-      credentials: "include",
-    })
-      .then((r) => {
-        if (!r.ok) throw new Error("Session expired");
-        return r.json() as Promise<SessionData>;
-      })
-      .finally(() => { inflightRefresh = null; });
+export class ApiError extends Error {
+  readonly status: number;
+  constructor(status: number) {
+    super(`API error ${status}`);
+    this.name = 'ApiError';
+    this.status = status;
   }
-  return inflightRefresh;
 }
 
-async function apiFetch<T>(
-  path: string,
-  token: string,
-  options?: RequestInit,
-): Promise<T> {
+// Clerk session tokens live ~60 s; getToken() returns a cached one and refreshes it in the
+// background, so every request just asks for the current token.
+async function sessionToken(skipCache = false): Promise<string> {
+  const token = await getToken({ skipCache });
+  if (!token) throw new Error("Not signed in");
+  return token;
+}
+
+async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const makeRequest = (t: string) =>
     fetch(`${API_BASE}${path}`, {
       ...options,
@@ -46,19 +35,17 @@ async function apiFetch<T>(
         Authorization: `Bearer ${t}`,
         ...(options?.headers ?? {}),
       },
-      credentials: "include",
     });
 
-  let res = await makeRequest(token);
+  let res = await makeRequest(await sessionToken());
 
+  // The cached token can expire in flight; retry once with a freshly minted one
   if (res.status === 401) {
-    const session = await refreshSession();
-    onRefreshed?.(session);
-    res = await makeRequest(session.access_token);
+    res = await makeRequest(await sessionToken(true));
   }
 
   if (res.status === 402) throw new PaywallError();
-  if (!res.ok) throw new Error(`API error ${res.status}`);
+  if (!res.ok) throw new ApiError(res.status);
   if (res.status === 204) return undefined as T;
   return res.json() as Promise<T>;
 }
@@ -93,23 +80,23 @@ export interface PresetData {
   logo_data?: string;
 }
 
-export const fetchPresets = (token: string) =>
-  apiFetch<Preset[]>("/presets", token);
+export const fetchPresets = () =>
+  apiFetch<Preset[]>("/presets");
 
-export const createPreset = (token: string, data: PresetData) =>
-  apiFetch<Preset>("/presets", token, {
+export const createPreset = (data: PresetData) =>
+  apiFetch<Preset>("/presets", {
     method: "POST",
     body: JSON.stringify(data),
   });
 
-export const updatePreset = (token: string, id: string, data: Partial<PresetData>) =>
-  apiFetch<Preset>(`/presets/${id}`, token, {
+export const updatePreset = (id: string, data: Partial<PresetData>) =>
+  apiFetch<Preset>(`/presets/${id}`, {
     method: "PATCH",
     body: JSON.stringify(data),
   });
 
-export const deletePreset = (token: string, id: string) =>
-  apiFetch<void>(`/presets/${id}`, token, { method: "DELETE" });
+export const deletePreset = (id: string) =>
+  apiFetch<void>(`/presets/${id}`, { method: "DELETE" });
 
 // ── Templates ─────────────────────────────────────────────────────────────────
 
@@ -123,30 +110,28 @@ export interface Template {
   updated_at: string;
 }
 
-export const fetchTemplates = (token: string) =>
-  apiFetch<Template[]>("/templates", token);
+export const fetchTemplates = () =>
+  apiFetch<Template[]>("/templates");
 
 export const createTemplate = (
-  token: string,
   data: { name: string; html_content: string; preset_id?: string },
 ) =>
-  apiFetch<Template>("/templates", token, {
+  apiFetch<Template>("/templates", {
     method: "POST",
     body: JSON.stringify(data),
   });
 
 export const updateTemplate = (
-  token: string,
   id: string,
   data: { name?: string; html_content?: string },
 ) =>
-  apiFetch<Template>(`/templates/${id}`, token, {
+  apiFetch<Template>(`/templates/${id}`, {
     method: "PATCH",
     body: JSON.stringify(data),
   });
 
-export const deleteTemplate = (token: string, id: string) =>
-  apiFetch<void>(`/templates/${id}`, token, { method: "DELETE" });
+export const deleteTemplate = (id: string) =>
+  apiFetch<void>(`/templates/${id}`, { method: "DELETE" });
 
 // ── Conversations ─────────────────────────────────────────────────────────────
 
@@ -172,40 +157,41 @@ export interface ConversationWithMessages extends Conversation {
   messages: ConversationMessage[];
 }
 
-export const fetchConversations = (token: string) =>
-  apiFetch<Conversation[]>("/conversations", token);
+export const fetchConversations = () =>
+  apiFetch<Conversation[]>("/conversations");
 
-export const fetchConversation = (token: string, id: string) =>
-  apiFetch<ConversationWithMessages>(`/conversations/${id}`, token);
+export const fetchConversation = (id: string) =>
+  apiFetch<ConversationWithMessages>(`/conversations/${id}`);
 
-export const updateConversation = (token: string, id: string, data: { title: string }) =>
-  apiFetch<Conversation>(`/conversations/${id}`, token, {
+export const updateConversation = (id: string, data: { title: string }) =>
+  apiFetch<Conversation>(`/conversations/${id}`, {
     method: "PATCH",
     body: JSON.stringify(data),
   });
 
-export const deleteConversation = (token: string, id: string) =>
-  apiFetch<void>(`/conversations/${id}`, token, { method: "DELETE" });
+export const deleteConversation = (id: string) =>
+  apiFetch<void>(`/conversations/${id}`, { method: "DELETE" });
 
 // ── Users ─────────────────────────────────────────────────────────────────────
 
-export const updateUserProfile = (token: string, data: { name: string }) =>
-  apiFetch<{ name: string }>('/users/me', token, {
+export interface AppUser {
+  id: string;
+  email: string;
+  name: string;
+  role: 'admin' | 'user';
+}
+
+// Also provisions the local account on the first call after sign-up
+export const fetchMe = () => apiFetch<{ user: AppUser }>('/me');
+
+export const updateUserProfile = (data: { name: string }) =>
+  apiFetch<{ name: string }>('/users/me', {
     method: 'PATCH',
     body: JSON.stringify(data),
   });
 
-export const changeUserPassword = (
-  token: string,
-  data: { currentPassword: string; newPassword: string },
-) =>
-  apiFetch<void>('/users/me/change-password', token, {
-    method: 'POST',
-    body: JSON.stringify(data),
-  });
-
-export const deleteUserAccount = (token: string) =>
-  apiFetch<void>('/users/me', token, { method: 'DELETE' });
+export const deleteUserAccount = () =>
+  apiFetch<void>('/users/me', { method: 'DELETE' });
 
 // ── AI Chat ───────────────────────────────────────────────────────────────────
 
@@ -216,14 +202,13 @@ export interface ChatResponse {
 }
 
 export const sendChat = (
-  token: string,
   message: string,
   model: string,
   conversationId?: string,
   presetId?: string,
   templateHtml?: string,
 ) =>
-  apiFetch<ChatResponse>("/ai/chat", token, {
+  apiFetch<ChatResponse>("/ai/chat", {
     method: "POST",
     body: JSON.stringify({
       message,

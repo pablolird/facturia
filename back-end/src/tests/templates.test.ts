@@ -74,8 +74,6 @@ describe('Templates', () => {
       const { accessToken: otherToken } = await registerAndLogin({
         name: 'Other User',
         email: 'other-tmpl@example.com',
-        password: 'pass123456',
-        turnstileToken: 'test-turnstile-token',
       });
       const res = await request(app)
         .patch(`/templates/${id}`)

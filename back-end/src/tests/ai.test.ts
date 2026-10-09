@@ -7,6 +7,7 @@ vi.mock('../ai/ai.service.js', () => ({
 
 import * as aiService from '../ai/ai.service.js';
 import app from '../app.js';
+import pool from '../db/db.js';
 import { registerAndLogin, registerAndLoginAdmin } from './helpers.js';
 
 const mockedChat = vi.mocked(aiService.chat);
@@ -101,8 +102,6 @@ describe('AI Chat', () => {
       const { accessToken: userToken } = await registerAndLogin({
         name: 'Trial User',
         email: 'trial@example.com',
-        password: 'password123',
-        turnstileToken: 'test-turnstile-token',
       });
       const header = { Authorization: `Bearer ${userToken}` };
       const body = { message: 'Create an invoice', model: 'deepseek-chat' };
@@ -119,8 +118,6 @@ describe('AI Chat', () => {
       const { accessToken: userToken } = await registerAndLogin({
         name: 'Racing User',
         email: 'racer@example.com',
-        password: 'password123',
-        turnstileToken: 'test-turnstile-token',
       });
       const header = { Authorization: `Bearer ${userToken}` };
       const body = { message: 'Create an invoice', model: 'deepseek-chat' };
@@ -131,6 +128,41 @@ describe('AI Chat', () => {
       const statuses = responses.map((r) => r.status);
       expect(statuses.filter((s) => s === 200)).toHaveLength(1);
       expect(statuses.filter((s) => s === 402)).toHaveLength(9);
+    });
+
+    it('allows only one trial per inbox across Gmail dot and +tag variants', async () => {
+      const body = { message: 'Create an invoice', model: 'deepseek-chat' };
+      const { accessToken: first } = await registerAndLogin({ name: 'Ana', email: 'ana.perez@gmail.com' });
+      const { accessToken: alias } = await registerAndLogin({ name: 'Ana', email: 'anaperez+2@googlemail.com' });
+
+      expect((await request(app).post('/ai/chat').set({ Authorization: `Bearer ${first}` }).send(body)).status).toBe(200);
+      const res = await request(app).post('/ai/chat').set({ Authorization: `Bearer ${alias}` }).send(body);
+      expect(res.status).toBe(402);
+    });
+
+    it('does not grant a new trial after deleting the account and signing up again', async () => {
+      const body = { message: 'Create an invoice', model: 'deepseek-chat' };
+      const user = { name: 'Returning', email: 'returning@example.com' };
+      const { accessToken } = await registerAndLogin(user);
+      const header = { Authorization: `Bearer ${accessToken}` };
+
+      expect((await request(app).post('/ai/chat').set(header).send(body)).status).toBe(200);
+      expect((await request(app).delete('/users/me').set(header)).status).toBe(204);
+
+      const { accessToken: again } = await registerAndLogin(user);
+      const res = await request(app).post('/ai/chat').set({ Authorization: `Bearer ${again}` }).send(body);
+      expect(res.status).toBe(402);
+    });
+
+    it('does not consume the per-account counter when the inbox already claimed its trial', async () => {
+      const body = { message: 'Create an invoice', model: 'deepseek-chat' };
+      const { accessToken: first } = await registerAndLogin({ name: 'Bo', email: 'bo@example.com' });
+      const { accessToken: second, clerkUserId } = await registerAndLogin({ name: 'Bo', email: 'bo+x@example.com' });
+
+      await request(app).post('/ai/chat').set({ Authorization: `Bearer ${first}` }).send(body).expect(200);
+      await request(app).post('/ai/chat').set({ Authorization: `Bearer ${second}` }).send(body).expect(402);
+      const { rows } = await pool.query('SELECT ai_prompts_used FROM users WHERE clerk_user_id = $1', [clerkUserId]);
+      expect(rows[0].ai_prompts_used).toBe(0);
     });
   });
 });

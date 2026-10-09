@@ -21,25 +21,23 @@ pnpm dlx shadcn@latest add <component>
 **Entry point:** `src/main.tsx` — mounts the provider tree and declares all routes.
 
 **Provider order (outermost → innermost):**
-`ThemeProvider` (next-themes) → `LanguageProvider` → `BrowserRouter` → `QueryClientProvider` → `AuthProvider` → routes
+`ThemeProvider` (next-themes) → `LanguageProvider` → `BrowserRouter` → `AppClerkProvider` → `QueryClientProvider` → `AuthProvider` → `ChatProvider` → routes
+
+`AppClerkProvider` (`src/components/AppClerkProvider.tsx`) sits inside the router so Clerk navigates with React Router (`routerPush`/`routerReplace`), follows the app language (`@clerk/localizations` `esES` / `ptBR`), uses the `shadcn` theme from `@clerk/ui/themes` (CSS imported in `index.css`), and bundles Clerk's UI via `ui={ui}` instead of loading it from Clerk's CDN.
 
 ### Authentication (`src/context/AuthContext.tsx`)
 
-- Access token stored in **React state (in-memory only)** — never localStorage.
-- Refresh token sent via **HttpOnly cookie** automatically.
-- On mount, `AuthContext` fires a React Query `useQuery` to `POST /auth/refresh` to restore the session.
-- `refetchInterval: 13 * 60 * 1000` — proactively refreshes the access token 2 minutes before its 15-minute expiry, keeping the session alive without user action.
-- Login, register, and logout are React Query mutations that update `queryClient.setQueryData(["session"], ...)`.
-- `updateUserName(name)` patches the cached session without a round-trip (used after a successful profile update).
-- `getAccessToken()` returns the current in-memory access token.
+- Clerk owns the session (sign-in, sign-up, Google, email verification, token refresh). `AuthContext` wraps it for the rest of the app.
+- Once Clerk reports a signed-in user, `useQuery(["me", clerkUserId])` calls `GET /me`, which also provisions the local account. `user` is the app's own user (`{ id, email, name, role }`; `id` is the local UUID used for `localStorage` keys).
+- Exposes `user`, `isAuthenticated` (app account loaded), `isSignedIn` (Clerk session), `authLoading`, `accountError` (`email_not_verified` / `account_conflict` / `unknown` when `/me` refuses), `logout()` (Clerk `signOut` + `queryClient.clear()`), `updateUserName(name)`.
 
 ### API client (`src/lib/api.ts`)
 
 - `apiFetch<T>` is the single authenticated fetch wrapper. It:
-  1. Sends `Authorization: Bearer <token>` and `credentials: include`.
-  2. On 401, calls `refreshSession()` (deduplicated singleton promise via `inflightRefresh`) and retries once with the new token. Calls `onRefreshed(session)` so `AuthContext` can update its query cache.
-  3. On 402, throws `PaywallError` (a typed subclass of `Error`).
-- All domain functions (`fetchPresets`, `sendChat`, etc.) are thin wrappers around `apiFetch`.
+  1. Gets the current Clerk session token with the standalone `getToken()` from `@clerk/react` (cached ~60 s tokens, refreshed by Clerk) and sends `Authorization: Bearer <token>`. No cookies are sent.
+  2. On 401, retries once with `getToken({ skipCache: true })`.
+  3. On 402, throws `PaywallError`; other failures throw `ApiError` (has `.status`).
+- All domain functions (`fetchPresets`, `sendChat`, etc.) are thin wrappers around `apiFetch` and take no token argument.
 
 ### Internationalization (`src/context/LanguageContext.tsx`)
 
@@ -50,11 +48,11 @@ pnpm dlx shadcn@latest add <component>
 
 ### Routing (`src/routes/`)
 
-- `ProtectedRoute.tsx` — shows a spinner while `authLoading`, then redirects to `/login` if `!isAuthenticated`, otherwise renders `<Outlet />`. **The redirect guard is active.**
-- `Login.tsx` — public route, shadcn `Tabs` for login/register. `react-hook-form` + zod v4. Use `z.email()` top-level (not `z.string().email()`).
+- `ProtectedRoute.tsx` — spinner while `authLoading`; redirects to `/login` if not signed in with Clerk; shows an account-error screen (with sign out) if signed in but `/me` refused; otherwise renders `<Outlet />`.
+- `Login.tsx` — public, mounted at `/login/*` (`mode="sign-in"`) and `/sign-up/*` (`mode="sign-up"`). Branded frame around Clerk's `<SignIn>` / `<SignUp>` (path routing; splat routes are required for nested steps like `/sign-up/verify-email-address`).
 - `Home.tsx` — main chat + preview page (see below).
 - `Templates.tsx` — saved templates grid page.
-- `Profile.tsx` — display name, change password, delete account.
+- `Profile.tsx` — display name, a Security card that opens Clerk's user profile (password, email, Google, sessions) via `openUserProfile()`, delete account.
 - `Settings.tsx` — language selector, default model and preset.
 
 ### Home page (`src/routes/Home.tsx`)
@@ -114,6 +112,6 @@ Both are wrapped in `SidebarProvider` in their respective route components.
 | Variable | Purpose |
 |---|---|
 | `VITE_API_BASE_URL` | Backend base URL (e.g. `http://localhost:3000`) |
-| `VITE_TURNSTILE_SITE_KEY` | Cloudflare Turnstile site key for the login CAPTCHA (public, safe to expose client-side) |
+| `VITE_CLERK_PUBLISHABLE_KEY` | Clerk publishable key (public). `npx clerk@latest env pull --file .env` writes it — remove the `CLERK_SECRET_KEY` line that command also adds; secrets never belong in the frontend env |
 
 Set in `.env` for local dev; see `.env.example`.

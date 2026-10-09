@@ -65,11 +65,11 @@ You describe what you need ("professional invoice for a consulting service, dark
 - Light, Dark, and System themes
 
 **Production-ready Auth**
-- 15-min access tokens (in-memory, never localStorage) + 7-day HttpOnly cookie refresh tokens
-- Single-use refresh token rotation (prevents replay attacks)
-- Cloudflare Turnstile CAPTCHA on login and registration, IP rate limiting, `helmet` security headers
-- Constant-time login check so response timing can't reveal which emails are registered
-- Admin role bypasses paywall; user role gets 1 free generation, enforced by a single atomic SQL update (race-safe)
+- [Clerk](https://clerk.com) sign-in with email + password or **Google**, mandatory email verification, bot protection and breached-password checks
+- Sign-ups from disposable email domains and `+tag` aliases are blocked
+- The API accepts only Clerk session tokens sent as bearer headers and minted for our own origin (`azp`); session cookies are ignored, so the same-origin `/api` rewrite can't be abused for CSRF
+- Free-trial abuse resistant: one generation per **mailbox**, not per account. Gmail dot / `googlemail.com` / `+tag` variants collapse to one canonical address, and the claim survives account deletion, all enforced in one race-safe transaction
+- Admin role bypasses the paywall; roles are read from the database on every request; `helmet` security headers
 
 ---
 
@@ -87,7 +87,7 @@ You describe what you need ("professional invoice for a consulting service, dark
 | Backend | Node.js 22 · Express 5 · TypeScript (ESM) |
 | Database | PostgreSQL 17 via `pg.Pool` · auto-run SQL migrations |
 | AI | DeepSeek API (`deepseek-chat` · `deepseek-reasoner`) via OpenAI-compatible SDK |
-| Auth | JWT · bcryptjs · HttpOnly cookie refresh tokens with JTI rotation |
+| Auth | Clerk (email + password, Google OAuth) · bearer session tokens verified with `@clerk/backend` · Svix-signed webhooks |
 | Validation | Zod v4 (frontend + backend) · react-hook-form |
 | Testing | Vitest · supertest · 47 integration tests against a real DB |
 | CI/CD | GitHub Actions · Docker multi-stage builds · 3 Compose environments |
@@ -98,17 +98,19 @@ You describe what you need ("professional invoice for a consulting service, dark
 
 ```mermaid
 flowchart LR
-    U[Browser<br/>React 19 SPA] -- "JWT access token (memory)<br/>refresh token (HttpOnly cookie)" --> API
+    U[Browser<br/>React 19 SPA] -- "Clerk session token<br/>(Bearer header)" --> API
+    U -- "sign-in · Google · verification" --> CK[(Clerk)]
+    CK -- "signed webhooks" --> API
     subgraph API[Express 5 API]
-        AUTH[auth<br/>Turnstile · rate limit · rotation]
+        AUTH[auth<br/>token check · provisioning · trial claims]
         AI[ai<br/>prompt builder · patch applier]
         CRUD[presets · templates<br/>conversations · users]
     end
     AI -- "OpenAI-compatible SDK" --> DS[(DeepSeek<br/>V3 / R1)]
-    API --> PG[(PostgreSQL<br/>8 auto-run migrations)]
+    API --> PG[(PostgreSQL<br/>9 auto-run migrations)]
 ```
 
-A chat request goes through: auth middleware → atomic paywall check (`UPDATE … WHERE ai_prompts_used < 1 RETURNING id`) → system prompt built from the selected company preset and Paraguay's mandatory invoice rules → DeepSeek → JSON parsed (with a fallback extractor for R1, which ignores JSON mode) → logo placeholder swapped for the stored base64 image → conversation and messages persisted.
+A chat request goes through: auth middleware (Clerk token verified, local account loaded or provisioned) → atomic paywall check (per-account counter + per-mailbox `trial_claims` row in one transaction) → system prompt built from the selected company preset and Paraguay's mandatory invoice rules → DeepSeek → JSON parsed (with a fallback extractor for R1, which ignores JSON mode) → logo placeholder swapped for the stored base64 image → conversation and messages persisted.
 
 ### How edit mode works
 
@@ -154,7 +156,11 @@ cd facturia
 # 2. Copy and fill in environment variables
 cp back-end/.env.example back-end/.env
 cp front-end/.env.example front-end/.env
-# Edit back-end/.env — set DATABASE_URL, JWT secrets, DEEPSEEK_API_KEY and TURNSTILE_SECRET_KEY
+# Edit back-end/.env — set DATABASE_URL and DEEPSEEK_API_KEY
+# Clerk keys: link the repo to your Clerk app, then pull its keys into both env files
+npx clerk@latest link
+npx clerk@latest env pull --file back-end/.env
+npx clerk@latest env pull --file front-end/.env   # then delete CLERK_SECRET_KEY from front-end/.env
 
 # 3. Start everything
 ./dev.sh
@@ -167,18 +173,12 @@ cp front-end/.env.example front-end/.env
 | Variable | Description |
 |---|---|
 | `DATABASE_URL` | PostgreSQL connection string |
-| `JWT_ACCESS_SECRET` | Secret for 15-min access tokens |
-| `JWT_REFRESH_SECRET` | Secret for 7-day refresh tokens |
+| `CLERK_SECRET_KEY` / `CLERK_PUBLISHABLE_KEY` | Clerk keys for the backend (`clerk env pull`) |
+| `CLERK_WEBHOOK_SIGNING_SECRET` | Signing secret of the Clerk webhook pointing at `<api>/webhooks/clerk` |
 | `DEEPSEEK_API_KEY` | From [platform.deepseek.com](https://platform.deepseek.com) |
-| `TURNSTILE_SECRET_KEY` | Cloudflare Turnstile secret (CAPTCHA verification) |
-| `CORS_ORIGIN` | Frontend origin (default: `http://localhost:3001`) |
+| `CORS_ORIGIN` | Frontend origin (default: `http://localhost:3001`); Clerk tokens must be minted for it |
 | `VITE_API_BASE_URL` | Backend URL for the frontend (set in `front-end/.env`) |
-| `VITE_TURNSTILE_SITE_KEY` | Turnstile site key (`front-end/.env`; the example file ships Cloudflare's always-pass test key) |
-
-Generate JWT secrets with:
-```bash
-node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
-```
+| `VITE_CLERK_PUBLISHABLE_KEY` | Clerk publishable key for the frontend (`front-end/.env`) |
 
 ---
 
@@ -188,13 +188,14 @@ node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
 facturia/
 ├── back-end/
 │   └── src/
-│       ├── auth/           Register, login, refresh, logout
+│       ├── auth/           Clerk token check, account provisioning, email canonicalization
+│       ├── webhooks/       Signed Clerk webhooks (user created / updated / deleted)
 │       ├── presets/        Company presets (RUC, timbrado, logo)
 │       ├── templates/      Saved invoice templates
 │       ├── conversations/  AI chat history + messages
 │       ├── ai/             DeepSeek integration, system prompts, patch applier
 │       ├── bench/          Edit-mode benchmark (legacy vs. patch)
-│       ├── users/          Profile, password change, account deletion
+│       ├── users/          Profile, account deletion, free-trial claim
 │       └── db/             pg pool + SQL migrations (auto-applied on startup)
 └── front-end/
     └── src/
@@ -208,7 +209,7 @@ facturia/
 
 ## Running tests
 
-The backend test suite hits a real Postgres instance. 47 integration tests cover auth, presets, templates, conversations, AI chat (DeepSeek mocked), and the free-trial paywall — including a test that fires 10 concurrent requests and asserts exactly one gets through. CI runs type-check, lint and the full suite on every push.
+The backend test suite hits a real Postgres instance. 62 tests cover auth (Clerk mocked at the SDK boundary), signed webhooks, presets, templates, conversations, AI chat (DeepSeek mocked), and the free-trial paywall. That includes a test that fires 10 concurrent requests and asserts exactly one gets through, and tests that Gmail-alias and delete-and-re-register attempts don't get a second trial. CI runs type-check, lint and the full suite on every push.
 
 ```bash
 # Start a throwaway test DB
@@ -236,7 +237,7 @@ The live demo runs on free tiers:
 | Backend | Render (Docker, `back-end/Dockerfile`) | Auto-deploys from `master`; migrations run on startup |
 | Database | Neon Postgres | `DATABASE_URL` with `sslmode=verify-full` |
 
-The `/api` rewrite makes the API same-origin with the frontend, so the refresh-token cookie is first-party and sessions survive reloads even in browsers that block third-party cookies. Behind that chain the backend sets `TRUST_PROXY_HOPS=3` (Cloudflare + Render's load balancer + local proxy), and the auth rate limiters key on Vercel's `x-vercel-forwarded-for` header, because the head of `X-Forwarded-For` is client-supplied when requests come through the rewrite.
+The `/api` rewrite makes the API same-origin with the frontend. Because of that, the backend authenticates only the `Authorization` header and never Clerk's `__session` cookie, which the browser would otherwise attach automatically. Behind that chain the backend sets `TRUST_PROXY_HOPS=3` (Cloudflare + Render's load balancer + local proxy).
 
 Render's free tier sleeps after 15 minutes idle, so a small external pinger hits `/health` every 10 minutes to keep the demo responsive.
 

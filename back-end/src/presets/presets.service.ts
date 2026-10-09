@@ -1,3 +1,5 @@
+import type { Pool, PoolClient } from 'pg';
+
 import pool from '../db/db.js';
 import type { Preset } from './presets.types.js';
 
@@ -29,8 +31,13 @@ export interface PresetPayload {
   logo_data?: string | undefined;
 }
 
-export async function createPreset(userId: string, data: PresetPayload): Promise<Preset> {
-  const { rows } = await pool.query<Preset>(
+// `db` lets callers create the preset inside their own transaction
+export async function createPreset(
+  userId: string,
+  data: PresetPayload,
+  db: Pool | PoolClient = pool,
+): Promise<Preset> {
+  const { rows } = await db.query<Preset>(
     `INSERT INTO presets (user_id, name, business_name, ruc, timbrado, address, city, phone, email, logo_data)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
      RETURNING *`,

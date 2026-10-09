@@ -2,8 +2,8 @@ import type { Request, Response } from 'express';
 import { z } from 'zod';
 
 import * as conversationsService from '../conversations/conversations.service.js';
-import pool from '../db/db.js';
 import { getPreset } from '../presets/presets.service.js';
+import { claimFreeTrial } from '../users/users.service.js';
 import * as aiService from './ai.service.js';
 
 const ALLOWED_MODELS = ['deepseek-chat', 'deepseek-reasoner'] as const;
@@ -24,21 +24,12 @@ export async function chat(req: Request, res: Response): Promise<void> {
   }
 
   const { conversationId, message, model, presetId, templateHtml: requestTemplateHtml } = parsed.data;
-  const userId = req.user!.id;
-  const userRole = req.user!.role;
+  const { id: userId, email, role } = req.user!;
 
-  // Enforce 1-prompt trial limit for non-admin users (atomic to prevent race conditions)
-  if (userRole !== 'admin') {
-    const { rows } = await pool.query<{ id: string }>(
-      `UPDATE users SET ai_prompts_used = ai_prompts_used + 1
-       WHERE id = $1 AND ai_prompts_used < 1
-       RETURNING id`,
-      [userId],
-    );
-    if (rows.length === 0) {
-      res.status(402).json({ error: 'trial_exhausted' });
-      return;
-    }
+  // Non-admins get one free prompt per mailbox (see claimFreeTrial)
+  if (role !== 'admin' && !(await claimFreeTrial(userId, email))) {
+    res.status(402).json({ error: 'trial_exhausted' });
+    return;
   }
 
   // Get or create the conversation

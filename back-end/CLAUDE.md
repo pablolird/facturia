@@ -41,16 +41,20 @@ Follow this split when adding new feature modules.
 
 **Database:** `pg.Pool` singleton in `src/db/db.ts`, connected via `DATABASE_URL`. Migrations run automatically at startup via `src/db/migrate.ts`, which applies `.sql` files from `src/db/migrations/` in filename order and tracks them in a `schema_migrations` table. New migrations go in that folder as `NNN_description.sql`.
 
-**Auth flow:**
-- Access tokens (15 min, `JWT_ACCESS_SECRET`) — sent as `Authorization: Bearer <token>`
-- Refresh tokens (7 days, `JWT_REFRESH_SECRET`) — stored in the DB by `jti` UUID; rotated on every use (single-use)
-- `req.user` is typed via `src/types/express.d.ts`: `{ id, username, email, role }`
-- `role` is `'admin' | 'user'` — included in the JWT access payload and on `req.user`
+**Auth flow (Clerk):**
+- Clerk owns identity (sign-up, sign-in, Google OAuth, email verification, passwords, bot protection). The API never sees credentials.
+- `authenticate` (`src/auth/auth.middleware.ts`) requires `Authorization: Bearer <Clerk session token>` and verifies it via `src/auth/clerk.ts` (`authenticateRequest` with `authorizedParties` = `CORS_ORIGIN`, so the token's `azp` must be our frontend). Only the header is forwarded to Clerk — the `__session` cookie is deliberately ignored, because the Vercel `/api` rewrite makes the API same-origin and cookie auth would be CSRF-able.
+- Local `users` rows keep their UUID (all other tables reference it) and link to Clerk via `clerk_user_id`. The first authenticated request provisions the row + demo preset (`provisionUser`, idempotent and race-safe); a pre-Clerk account is linked by **verified** email. Unverified emails get 403 `email_not_verified`; an email owned by another Clerk user gets 409 `account_conflict`.
+- `req.user` (`src/types/express.d.ts`): `{ id, clerkUserId, username, email, role }` — loaded from the DB on every request, so role changes apply immediately.
+- `src/auth/clerk.ts` is the only module that talks to Clerk; tests replace it with `src/tests/clerkMock.ts`.
 
 ## Feature modules
 
 ### `src/auth/`
-Register (creates a demo preset for the new user), login, refresh, logout. On register, `createPreset` is called to seed "Empresa Demo S.A." with sample Paraguay fields so the user has a preset immediately.
+No routes. `auth.middleware.ts` (session check + provisioning), `auth.service.ts` (`provisionUser`, `syncUserEmail`, `deleteUserByClerkId`), `clerk.ts` (Clerk SDK wrapper), `email.ts` (`canonicalEmail` / `trialEmailHash`). Provisioning seeds "Empresa Demo S.A." with sample Paraguay fields so the user has a preset immediately.
+
+### `src/webhooks/`
+`POST /webhooks/clerk` — mounted **before** `express.json()` because Svix signatures are verified over the raw body (`verifyWebhook`, `CLERK_WEBHOOK_SIGNING_SECRET`). Handles `user.created` (provision), `user.updated` (sync verified primary email), `user.deleted` (delete local account). All handlers are idempotent; non-retryable cases are acknowledged with 200. Webhooks are optional for correctness (provisioning also happens on first request). Locally: `npx clerk@latest webhooks listen`.
 
 ### `src/presets/`
 CRUD for company presets. Paraguay-specific fields: `business_name`, `ruc`, `timbrado`, `address`, `city`, `phone`, `email`. All fields optional except `name`.
@@ -63,15 +67,16 @@ Conversations with `title`, `preset_id`, `template_html`. Each conversation owns
 
 ### `src/ai/`
 `POST /ai/chat` — the core AI endpoint.
-- Enforces paywall before calling DeepSeek: atomic `UPDATE users SET ai_prompts_used = ai_prompts_used + 1 WHERE id = $1 AND ai_prompts_used < 1 RETURNING id`. Returns 402 `{ error: 'trial_exhausted' }` if the row count is 0. Admin users bypass this check.
+- Enforces paywall before calling DeepSeek via `claimFreeTrial` (`src/users/users.service.ts`): in one transaction, increments `ai_prompts_used` (only while `< 1`) **and** inserts the SHA-256 of the canonical email into `trial_claims`. Both must succeed or it rolls back and returns 402 `{ error: 'trial_exhausted' }`. `trial_claims` has no FK, so deleting the account and signing up again, or using a Gmail dot / `+tag` variant of the same inbox, doesn't grant another trial. Admin users bypass this check.
 - Gets or creates a conversation, persists user message, calls DeepSeek, persists assistant message, updates `template_html` on the conversation.
 - Two system prompts: generation (returns full `templateHtml`) and edit mode (when a template exists, the model returns `{ find, replace }` patches that `applyEdits` applies server-side, with one automatic retry on a failed match). `pnpm bench:edits` benchmarks this against the old full-regeneration prompt (`src/bench/`).
 - `deepseek-reasoner` (R1) doesn't support `response_format: json_object` — only `deepseek-chat` gets that flag. R1 output is cleaned via a markdown fence extractor before JSON.parse.
 
 ### `src/users/`
-- `PATCH /users/me` — update display name
-- `POST /users/me/change-password` — verify current password, hash and store new one
-- `DELETE /users/me` — delete account (cascades to all user data)
+- `PATCH /users/me` — update display name (local only)
+- `DELETE /users/me` — deletes the Clerk user first, then the local account (cascades to all user data). If Clerk fails, local data is kept.
+- `GET /me` (in `app.ts`) — `{ user: { id, email, name, role } }`; the frontend's first call after sign-in, which provisions the account
+- Passwords, email changes and linked Google accounts are managed in Clerk's `<UserProfile>`
 
 ## Database migrations
 
@@ -85,6 +90,7 @@ Conversations with `title`, `preset_id`, `template_html`. Each conversation owns
 | `006_create_messages.sql` | messages table |
 | `007_add_user_role_and_prompt_count.sql` | role + ai_prompts_used on users |
 | `008_add_logo_to_presets.sql` | logo_data column (base64 data URL) on presets |
+| `009_clerk_auth.sql` | `clerk_user_id`, nullable `password_hash`, non-unique `username`, `trial_claims` (backfilled from used trials). Additive only: the unused `refresh_tokens` table and `password_hash` column are left for a later cleanup migration |
 
 ## Docker
 
@@ -95,16 +101,17 @@ Multi-stage `Dockerfile` (builder → runner). SQL migration files are not emitt
 | Variable | Purpose |
 |---|---|
 | `DATABASE_URL` | PostgreSQL connection string |
-| `JWT_ACCESS_SECRET` | Signs access tokens |
-| `JWT_REFRESH_SECRET` | Signs refresh tokens |
-| `CORS_ORIGIN` | Allowed frontend origin (default: `http://localhost:3001`) |
+| `CLERK_SECRET_KEY` | Clerk Backend API key (`npx clerk@latest env pull --file .env`) |
+| `CLERK_PUBLISHABLE_KEY` | Clerk publishable key (same command) |
+| `CLERK_WEBHOOK_SIGNING_SECRET` | Signing secret of the Clerk webhook endpoint |
+| `CLERK_JWT_KEY` | Optional PEM public key for networkless token verification |
+| `CORS_ORIGIN` | Allowed frontend origin(s), comma-separated (default: `http://localhost:3001`); also the `authorizedParties` for Clerk tokens |
 | `PORT` | Server port (default: `3000`) |
 | `DEEPSEEK_API_KEY` | DeepSeek API key for AI features |
-| `TURNSTILE_SECRET_KEY` | Cloudflare Turnstile secret key, verifies the login CAPTCHA |
-| `TRUST_PROXY_HOPS` | Reverse proxies in front of the app (`0` locally, `3` on Render); auth rate limiters also read Vercel's `x-vercel-forwarded-for` |
+| `TRUST_PROXY_HOPS` | Reverse proxies in front of the app (`0` locally, `3` on Render) |
 
 Copy `.env.example` → `.env` for local dev. Docker environments use `.env.qa` / `.env.prod`.
 
 ## Testing
 
-47 Vitest integration tests in `src/tests/`. Tests use a real PostgreSQL DB (separate from dev). `globalSetup.ts` runs migrations before the suite. `helpers.ts` provides test user creation and token extraction. DeepSeek API is mocked in `ai.test.ts`. Run with `DATABASE_URL=<test-db-url> pnpm test`.
+62 Vitest tests in `src/tests/`. Tests use a real PostgreSQL DB (separate from dev). `globalSetup.ts` runs migrations before the suite. `setup.ts` mocks `auth/clerk.js` with `clerkMock.ts`: tokens are `test-token:<clerkUserId>`, identities default to a verified `<id>@example.com` (override with `setClerkIdentity`). `helpers.ts` `registerAndLogin` signs in through that mock and provisions the user. Webhook tests sign payloads for real with the test `CLERK_WEBHOOK_SIGNING_SECRET` from `vitest.config.ts`. DeepSeek API is mocked in `ai.test.ts`. Run with `DATABASE_URL=<test-db-url> pnpm test`.

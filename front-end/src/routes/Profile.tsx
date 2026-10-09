@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { useMutation } from "@tanstack/react-query";
-import { Check } from "lucide-react";
+import { useClerk } from "@clerk/react";
+import { Check, ShieldCheck } from "lucide-react";
 
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
-import { changeUserPassword, deleteUserAccount, updateUserProfile } from "@/lib/api";
+import { deleteUserAccount, updateUserProfile } from "@/lib/api";
 import NavSidebar from "@/components/NavSidebar";
 import ModeToggle from "@/components/ModeToggle";
 import { Button } from "@/components/ui/button";
@@ -25,24 +26,18 @@ import {
 } from "@/components/ui/sidebar";
 
 export default function Profile() {
-  const { user, getAccessToken, logout, updateUserName } = useAuth();
+  const { user, logout, updateUserName } = useAuth();
+  const { openUserProfile } = useClerk();
   const { t } = useLanguage();
   const navigate = useNavigate();
-  const token = getAccessToken();
 
   const [name, setName] = useState(user?.name ?? "");
   const [nameSuccess, setNameSuccess] = useState(false);
 
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmNewPassword, setConfirmNewPassword] = useState("");
-  const [passwordError, setPasswordError] = useState<string | null>(null);
-  const [passwordSuccess, setPasswordSuccess] = useState(false);
-
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const updateNameMutation = useMutation({
-    mutationFn: () => updateUserProfile(token!, { name: name.trim() }),
+    mutationFn: () => updateUserProfile({ name: name.trim() }),
     onSuccess: (data) => {
       updateUserName(data.name);
       setNameSuccess(true);
@@ -50,47 +45,17 @@ export default function Profile() {
     },
   });
 
-  const changePasswordMutation = useMutation({
-    mutationFn: () => changeUserPassword(token!, { currentPassword, newPassword }),
-    onSuccess: () => {
-      setCurrentPassword("");
-      setNewPassword("");
-      setConfirmNewPassword("");
-      setPasswordError(null);
-      setPasswordSuccess(true);
-      setTimeout(() => setPasswordSuccess(false), 3000);
-    },
-    onError: (e) => {
-      const msg = e instanceof Error ? e.message : "";
-      setPasswordError(msg.includes("400") ? t("err_wrong_password") : t("err_generic"));
-    },
-  });
-
   const deleteAccountMutation = useMutation({
-    mutationFn: () => deleteUserAccount(token!),
+    mutationFn: deleteUserAccount,
     onSuccess: async () => {
       try {
         await logout();
       } catch {
-        // user row is gone, logout endpoint may fail
+        // The Clerk user is already deleted, so ending its session can fail
       }
       navigate("/login");
     },
   });
-
-  function handlePasswordSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setPasswordError(null);
-    if (newPassword.length < 6) {
-      setPasswordError(t("err_password_too_short"));
-      return;
-    }
-    if (newPassword !== confirmNewPassword) {
-      setPasswordError(t("err_passwords_no_match"));
-      return;
-    }
-    changePasswordMutation.mutate();
-  }
 
   return (
     <SidebarProvider>
@@ -109,7 +74,7 @@ export default function Profile() {
           <main className="flex-1 overflow-y-auto p-4 md:p-6">
             <div className="max-w-3xl mx-auto flex flex-col gap-5">
 
-              {/* Personal Info + Change Password side by side on large screens */}
+              {/* Personal Info + Security side by side on large screens */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
                 {/* Personal Information */}
@@ -166,69 +131,17 @@ export default function Profile() {
                   </CardContent>
                 </Card>
 
-                {/* Change Password */}
+                {/* Security: password, linked Google account and sessions live in Clerk */}
                 <Card>
                   <CardHeader>
-                    <CardTitle>{t("section_change_password")}</CardTitle>
+                    <CardTitle>{t("section_security")}</CardTitle>
+                    <CardDescription>{t("security_desc")}</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <form onSubmit={handlePasswordSubmit} className="flex flex-col gap-4">
-                      <div className="grid gap-1.5">
-                        <Label htmlFor="current-password">{t("field_current_password")}</Label>
-                        <Input
-                          id="current-password"
-                          type="password"
-                          value={currentPassword}
-                          onChange={(e) => setCurrentPassword(e.target.value)}
-                          placeholder="••••••••"
-                        />
-                      </div>
-                      <div className="grid gap-1.5">
-                        <Label htmlFor="new-password">{t("field_new_password")}</Label>
-                        <Input
-                          id="new-password"
-                          type="password"
-                          value={newPassword}
-                          onChange={(e) => setNewPassword(e.target.value)}
-                          placeholder="••••••••"
-                        />
-                      </div>
-                      <div className="grid gap-1.5">
-                        <Label htmlFor="confirm-new-password">
-                          {t("field_confirm_new_password")}
-                        </Label>
-                        <Input
-                          id="confirm-new-password"
-                          type="password"
-                          value={confirmNewPassword}
-                          onChange={(e) => setConfirmNewPassword(e.target.value)}
-                          placeholder="••••••••"
-                        />
-                      </div>
-                      {passwordError && (
-                        <p className="text-xs text-destructive">{passwordError}</p>
-                      )}
-                      {passwordSuccess && (
-                        <p className="text-xs text-green-600 dark:text-green-400">
-                          {t("password_updated")}
-                        </p>
-                      )}
-                      <Button
-                        type="submit"
-                        size="sm"
-                        disabled={
-                          !currentPassword ||
-                          !newPassword ||
-                          !confirmNewPassword ||
-                          changePasswordMutation.isPending
-                        }
-                        className="self-start"
-                      >
-                        {changePasswordMutation.isPending
-                          ? t("btn_saving")
-                          : t("btn_update_password")}
-                      </Button>
-                    </form>
+                    <Button size="sm" variant="outline" onClick={() => openUserProfile()}>
+                      <ShieldCheck className="size-3.5" />
+                      {t("btn_manage_security")}
+                    </Button>
                   </CardContent>
                 </Card>
               </div>

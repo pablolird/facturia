@@ -6,7 +6,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronLeft, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
-import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
 import {
   createPreset,
@@ -211,22 +210,18 @@ interface PresetSheetProps {
 }
 
 export default function PresetSheet({ open, onOpenChange }: PresetSheetProps) {
-  const { getAccessToken } = useAuth();
   const { t } = useLanguage();
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState<Preset | "new" | null>(null);
   const [logoData, setLogoData] = useState<string | null>(null);
 
-  const token = getAccessToken();
-
   const { data: presets = [] } = useQuery({
     queryKey: ["presets"],
-    queryFn: () => fetchPresets(token!),
-    enabled: !!token,
+    queryFn: () => fetchPresets(),
   });
 
   const createMutation = useMutation({
-    mutationFn: (data: PresetData) => createPreset(token!, data),
+    mutationFn: (data: PresetData) => createPreset(data),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["presets"] });
       setEditing(null);
@@ -236,7 +231,7 @@ export default function PresetSheet({ open, onOpenChange }: PresetSheetProps) {
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<PresetData> }) =>
-      updatePreset(token!, id, data),
+      updatePreset(id, data),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["presets"] });
       setEditing(null);
@@ -245,7 +240,7 @@ export default function PresetSheet({ open, onOpenChange }: PresetSheetProps) {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => deletePreset(token!, id),
+    mutationFn: (id: string) => deletePreset(id),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["presets"] });
       toast.success(t("preset_deleted"));

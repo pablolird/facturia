@@ -37,13 +37,11 @@
   },
   "type": "module",
   "dependencies": {
-    "bcryptjs": "^3.0.3",
-    "cookie-parser": "^1.4.7",
+    "@clerk/backend": "^3.23.1",
     "cors": "^2.8.6",
     "express": "^5.2.1",
     "express-rate-limit": "^8.5.2",
     "helmet": "^8.3.0",
-    "jsonwebtoken": "^9.0.3",
     "openai": "^6.44.0",
     "pg": "^8.21.0",
     "zod": "^4.4.3"
@@ -51,11 +49,8 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@tsconfig/node22": "^22.0.5",
-    "@types/bcryptjs": "^3.0.0",
-    "@types/cookie-parser": "^1.4.10",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
-    "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^25.9.1",
     "@types/pg": "^8.20.0",
     "@types/supertest": "^6.0.2",

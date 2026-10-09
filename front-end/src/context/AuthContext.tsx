@@ -1,183 +1,69 @@
-import {
-  createContext,
-  useContext,
-  useState,
-  useCallback,
-  useEffect,
-  type ReactNode,
-} from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { setRefreshCallback, type SessionData } from "@/lib/api";
+import { createContext, useCallback, useContext, type ReactNode } from "react";
+import { useAuth as useClerkAuth, useClerk } from "@clerk/react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { ApiError, fetchMe, type AppUser } from "@/lib/api";
 
-const API_URL = `${import.meta.env.VITE_API_BASE_URL as string}/auth`;
-
-interface User {
-  id: string;
-  email: string;
-  name: string;
-}
+// Why a signed-in Clerk session has no usable app account (see GET /me on the backend)
+export type AccountError = "email_not_verified" | "account_conflict" | "unknown";
 
 interface AuthContextValue {
-  user: User | null;
-  accessToken: string | null;
+  user: AppUser | null;
   isAuthenticated: boolean;
   authLoading: boolean;
-  login: (email: string, password: string, turnstileToken: string) => Promise<void>;
-  register: (name: string, email: string, password: string, turnstileToken: string) => Promise<void>;
+  isSignedIn: boolean;
+  accountError: AccountError | null;
   logout: () => Promise<void>;
-  getAccessToken: () => string | null;
   updateUserName: (name: string) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-async function refreshAccessToken(): Promise<{ access_token: string; user: User }> {
-  const res = await fetch(`${API_URL}/refresh`, {
-    method: "POST",
-    credentials: "include",
-  });
-  if (!res.ok) throw new Error("Refresh failed");
-  return res.json();
+function toAccountError(error: unknown): AccountError {
+  if (error instanceof ApiError && error.status === 403) return "email_not_verified";
+  if (error instanceof ApiError && error.status === 409) return "account_conflict";
+  return "unknown";
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [accessToken, setAccessToken] = useState<string | null>(null);
+  const { isLoaded, isSignedIn, userId } = useClerkAuth();
+  const { signOut } = useClerk();
   const queryClient = useQueryClient();
 
-  const { data: sessionData, isLoading: authLoading } = useQuery({
-    queryKey: ["session"],
-    queryFn: refreshAccessToken,
-    retry: false,
+  // Keyed by the Clerk user so switching accounts never serves the previous user's profile
+  const meKey = ["me", userId] as const;
+  const me = useQuery({
+    queryKey: meKey,
+    queryFn: fetchMe,
+    enabled: isLoaded && !!isSignedIn,
     staleTime: Infinity,
-    gcTime: Infinity,
     refetchOnWindowFocus: false,
-    refetchOnMount: true,
-    throwOnError: false,
-    refetchInterval: 13 * 60 * 1000,
   });
 
-  useEffect(() => {
-    setRefreshCallback((session: SessionData) => {
-      queryClient.setQueryData(["session"], session);
-    });
-  }, [queryClient]);
-
-  // Keep access token in sync with query data
-  const resolvedToken = sessionData?.access_token ?? accessToken;
-  const user = sessionData?.user ?? null;
-  const isAuthenticated = !!resolvedToken;
-
-  const loginMutation = useMutation({
-    mutationFn: async ({
-      email,
-      password,
-      turnstileToken,
-    }: {
-      email: string;
-      password: string;
-      turnstileToken: string;
-    }) => {
-      const res = await fetch(`${API_URL}/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ email, password, turnstileToken }),
-      });
-      if (!res.ok) throw new Error(String(res.status));
-      return res.json() as Promise<{ access_token: string; user: User }>;
-    },
-    onSuccess: (data) => {
-      setAccessToken(data.access_token);
-      queryClient.setQueryData(["session"], data);
-    },
-  });
-
-  const registerMutation = useMutation({
-    mutationFn: async ({
-      name,
-      email,
-      password,
-      turnstileToken,
-    }: {
-      name: string;
-      email: string;
-      password: string;
-      turnstileToken: string;
-    }) => {
-      const res = await fetch(`${API_URL}/register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ name, email, password, turnstileToken }),
-      });
-      if (!res.ok) throw new Error(String(res.status));
-      return res.json() as Promise<{ access_token: string; user: User }>;
-    },
-    onSuccess: (data) => {
-      setAccessToken(data.access_token);
-      queryClient.setQueryData(["session"], data);
-    },
-  });
-
-  const logoutMutation = useMutation({
-    mutationFn: async () => {
-      const res = await fetch(`${API_URL}/logout`, {
-        method: "POST",
-        credentials: "include",
-      });
-      if (!res.ok) throw new Error("Logout failed");
-    },
-    onSettled: () => {
-      setAccessToken(null);
-      queryClient.setQueryData(["session"], null);
-      queryClient.clear();
-    },
-  });
-
-  const login = useCallback(
-    async (email: string, password: string, turnstileToken: string) => {
-      await loginMutation.mutateAsync({ email, password, turnstileToken });
-    },
-    [loginMutation]
-  );
-
-  const register = useCallback(
-    async (name: string, email: string, password: string, turnstileToken: string) => {
-      await registerMutation.mutateAsync({ name, email, password, turnstileToken });
-    },
-    [registerMutation]
-  );
+  const user = isSignedIn ? (me.data?.user ?? null) : null;
 
   const logout = useCallback(async () => {
-    await logoutMutation.mutateAsync();
-  }, [logoutMutation]);
-
-  const getAccessToken = useCallback(() => resolvedToken, [resolvedToken]);
+    await signOut();
+    queryClient.clear();
+  }, [signOut, queryClient]);
 
   const updateUserName = useCallback(
     (name: string) => {
-      queryClient.setQueryData<{ access_token: string; user: User } | null>(
-        ['session'],
-        (old) => {
-          if (!old) return old;
-          return { ...old, user: { ...old.user, name } };
-        },
+      queryClient.setQueryData<{ user: AppUser }>(["me", userId], (old) =>
+        old ? { user: { ...old.user, name } } : old,
       );
     },
-    [queryClient],
+    [queryClient, userId],
   );
 
   return (
     <AuthContext.Provider
       value={{
         user,
-        accessToken: resolvedToken,
-        isAuthenticated,
-        authLoading,
-        login,
-        register,
+        isAuthenticated: !!user,
+        authLoading: !isLoaded || (!!isSignedIn && me.isPending),
+        isSignedIn: !!isSignedIn,
+        accountError: isSignedIn && me.isError ? toAccountError(me.error) : null,
         logout,
-        getAccessToken,
         updateUserName,
       }}
     >

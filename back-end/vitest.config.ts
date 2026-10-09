@@ -8,8 +8,8 @@ export default defineConfig({
       DATABASE_URL:
         process.env['DATABASE_URL'] ??
         'postgresql://test_user:test_password@localhost:5432/test_db',
-      JWT_ACCESS_SECRET: process.env['JWT_ACCESS_SECRET'] ?? 'test-access-secret-key',
-      JWT_REFRESH_SECRET: process.env['JWT_REFRESH_SECRET'] ?? 'test-refresh-secret-key',
+      // Test-only Standard Webhooks secret; webhooks.test.ts signs its payloads with it
+      CLERK_WEBHOOK_SIGNING_SECRET: 'whsec_dGVzdC13ZWJob29rLXNpZ25pbmctc2VjcmV0LTMyYnl0ZXM=',
       NODE_ENV: 'test',
     },
     globalSetup: ['./src/tests/globalSetup.ts'],

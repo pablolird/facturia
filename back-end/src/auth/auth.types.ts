@@ -1,33 +1,16 @@
+export type Role = 'admin' | 'user';
+
 export interface User {
   id: string;
   username: string;
   email: string;
-  role: 'admin' | 'user';
-  createdAt: Date;
-  updatedAt: Date;
+  role: Role;
 }
 
-export interface JwtAccessPayload {
-  userId: string;
-  username: string;
-  email: string;
-  role: 'admin' | 'user';
-  type: 'access';
-}
-
-export interface JwtRefreshPayload {
-  userId: string;
-  jti: string;
-  type: 'refresh';
-}
-
-export interface TokenPair {
-  accessToken: string;
-  refreshToken: string;
-}
-
-export interface InternalSession {
-  accessToken: string;
-  refreshToken: string;
-  user: { id: string; username: string; email: string; role: 'admin' | 'user' };
+// The parts of a Clerk user the app relies on, from either the Backend API or a webhook payload
+export interface ClerkIdentity {
+  clerkUserId: string;
+  email: string | null;
+  emailVerified: boolean;
+  name: string;
 }

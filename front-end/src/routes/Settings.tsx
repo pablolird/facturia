@@ -39,9 +39,8 @@ const MODEL_KEY = "invoice-model";
 const PRESET_KEY = "invoice-preset";
 
 export default function Settings() {
-  const { getAccessToken, user } = useAuth();
+  const { user } = useAuth();
   const { t, lang, setLang } = useLanguage();
-  const token = getAccessToken();
   const presetKey = user ? `${PRESET_KEY}_${user.id}` : null;
 
   const [defaultModel, setDefaultModel] = useState(
@@ -54,8 +53,7 @@ export default function Settings() {
 
   const { data: presets = [] } = useQuery({
     queryKey: ["presets"],
-    queryFn: () => fetchPresets(token!),
-    enabled: !!token,
+    queryFn: () => fetchPresets(),
   });
 
   function flash(key: string) {

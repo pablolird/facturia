@@ -11,9 +11,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@clerk/localizations": "^4.22.1",
+    "@clerk/react": "^6.17.7",
+    "@clerk/ui": "^1.39.1",
     "@fontsource-variable/inter": "^5.2.8",
     "@hookform/resolvers": "^5.4.0",
-    "@marsidev/react-turnstile": "^1.5.3",
     "@tailwindcss/vite": "^4.3.0",
     "@tanstack/react-query": "^5.100.14",
     "class-variance-authority": "^0.7.1",

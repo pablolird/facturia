@@ -23,20 +23,20 @@ Or start each separately — see `back-end/CLAUDE.md` and `front-end/CLAUDE.md` 
 ## Full feature inventory
 
 ### Authentication & Security
-- Register / login / logout with JWT: 15-min access tokens stored **in React memory only** (never localStorage) + 7-day HttpOnly cookie refresh tokens
-- Refresh token rotation on every use (single-use, JTI stored in DB — prevents replay attacks)
-- Constant-time bcrypt comparison prevents user enumeration via timing side-channels
-- Login is gated by a Cloudflare Turnstile CAPTCHA (verified server-side against `TURNSTILE_SECRET_KEY`) plus IP-based rate limiting (`express-rate-limit`, 10 attempts / 15 min); registration has its own 5 / 15 min limiter
+- **Clerk** handles sign-up / sign-in (email + password and **Google**), mandatory email verification (code), bot protection, brute-force lockout and breached-password checks. Dev instance: app `app_3KT59GtWKFLmdjerV5ka3eZWM9x`, managed with `npx clerk@latest` (`config pull/patch`, `env pull`).
+- Sign-up restrictions on the Clerk instance: **disposable email domains blocked**, **email subaddresses (`+tag`) blocked**, 8-char minimum password.
+- API accepts only `Authorization: Bearer <Clerk session token>` whose `azp` matches `CORS_ORIGIN`; Clerk's `__session` cookie is ignored (prevents CSRF through the same-origin Vercel rewrite)
+- Local accounts are provisioned on the first authenticated request (`GET /me`) or by the `user.created` webhook — only for **verified** emails; pre-Clerk accounts are linked by verified email
+- Free trial is **one per mailbox**: `trial_claims` stores SHA-256 of the canonical email (Gmail dots / googlemail / `+tag` collapsed) and survives account deletion
 - `helmet()` sets standard security headers on all API responses; Docker containers run as the unprivileged `node` user, not root
-- Auto-refresh at 13-min intervals (`refetchInterval`); 401 interception retries once with a fresh token (deduped via singleton `inflightRefresh` promise)
-- Role system: `admin | user` — admins bypass the paywall; role is embedded in the JWT access payload
-- `ProtectedRoute` shows a spinner while auth loads, then redirects unauthenticated users to `/login`
+- Role system: `admin | user` — admins bypass the paywall; role is read from the DB on every request
+- `ProtectedRoute` shows a spinner while auth loads, redirects signed-out users to `/login`, and shows an error screen if the API refuses the account
 
 ### Company Presets
 - Full CRUD via a right-slide shadcn **Sheet** drawer (`PresetSheet.tsx`)
 - Paraguay-specific fields: business name (razón social), **RUC** (validated: `/^\d+-\d$/`), **timbrado** (validated: 8 digits), address, city, phone, email
 - **Logo upload**: client converts file to base64 data URL (max 1 MB); stored as-is in the DB; displayed as a thumbnail in the preset list; injected into generated templates via `LOGO_PLACEHOLDER` substitution
-- Demo preset ("Empresa Demo S.A.") auto-created on every new user registration, with full sample Paraguay fields
+- Demo preset ("Empresa Demo S.A.") auto-created when a new user's account is provisioned, with full sample Paraguay fields
 - After presets load, validates that the stored `selectedPreset` still exists; auto-selects the demo preset if nothing is selected
 - Toast notifications (sonner) on create / update / delete
 
@@ -48,7 +48,7 @@ Or start each separately — see `back-end/CLAUDE.md` and `front-end/CLAUDE.md` 
 - **Edit mode**: when a template already exists in the conversation, the current HTML is passed back with strict minimal-patch instructions — the model edits, not regenerates
 - **Mandatory Paraguay invoice requirements** always enforced: Condición de Venta (Contado/Crédito field), IVA breakdown columns (Exentas / Gravado 5% / Gravado 10%), totals block with IVA rows
 - R1 compatibility: `response_format: json_object` omitted for R1; markdown fence extractor fallback parses JSON if R1 wraps in code blocks
-- **Paywall**: 1 free AI prompt per non-admin user. Enforced atomically: `UPDATE users SET ai_prompts_used = ai_prompts_used + 1 WHERE id = $1 AND ai_prompts_used < 1 RETURNING id`. Returns HTTP 402 `{ error: 'trial_exhausted' }` on miss.
+- **Paywall**: 1 free AI prompt per non-admin user **and** per mailbox. Enforced atomically in one transaction (`claimFreeTrial`): `ai_prompts_used < 1` counter + `trial_claims` insert. Returns HTTP 402 `{ error: 'trial_exhausted' }` on miss.
 
 ### Generation Animation (while AI is loading)
 - `TemplateGenerating` component renders a realistic fake-invoice skeleton in the preview panel
@@ -87,9 +87,9 @@ Or start each separately — see `back-end/CLAUDE.md` and `front-end/CLAUDE.md` 
 - Desktop: side-by-side panels; chat panel has `shrink-0` fixed width
 
 ### User Profile (`/profile`)
-- Change display name — updates the `AuthContext` session cache without a page reload
-- Change password — current + new + confirm, 6-char minimum, client-side validation
-- Delete account — two-step confirmation; cascades all data in DB; handles edge case where logout may fail after the user row is gone
+- Change display name — updates the `AuthContext` cache without a page reload
+- Security — opens Clerk's user profile (password, email, linked Google account, active sessions)
+- Delete account — two-step confirmation; deletes the Clerk user, then cascades all local data; sign-out errors after deletion are ignored
 
 ### Settings (`/settings`)
 - **Language selector**: EN / ES / PT toggle buttons; instant switch, persisted to `localStorage`
@@ -122,9 +122,9 @@ Both are wrapped in `SidebarProvider` in their respective route components.
 
 ## Key design decisions
 
-- **Paywall**: Non-admin users get exactly 1 free AI prompt. Enforced atomically server-side (`ai_prompts_used` column). Client caches the paywalled state per user in `localStorage`.
+- **Paywall**: Non-admin users get exactly 1 free AI prompt, and each mailbox gets one trial across all accounts. Enforced atomically server-side (`ai_prompts_used` + `trial_claims`). Client caches the paywalled state per user in `localStorage`.
 - **AI model**: DeepSeek V3 (`deepseek-chat`) and R1 (`deepseek-reasoner`) via OpenAI-compatible SDK. R1 does not support `response_format: json_object`.
-- **Token strategy**: 15-min JWT access tokens in React memory + 7-day HttpOnly cookie refresh tokens. Frontend auto-refreshes at 13-min intervals and intercepts 401s.
+- **Auth**: Clerk (dev instance until a custom domain is bought — Clerk production instances need an owned domain, and production Google OAuth needs our own Google Cloud credentials). Frontend sends Clerk session tokens as bearer headers; backend verifies them with `@clerk/backend` and keeps its own `users` table linked by `clerk_user_id`.
 - **Paraguay focus**: Templates target Paraguay's SIFEN invoice format. Company presets hold RUC, timbrado, and other Paraguay-specific fields. AI system prompt enforces IVA breakdown and Condición de Venta.
 - **Languages**: Full EN / ES / PT i18n via `LanguageContext` + `translations.ts`. No hard-coded UI strings.
 - **Logo**: Base64 data URL stored in DB. AI uses a `LOGO_PLACEHOLDER` token; backend substitutes the real image before returning.
@@ -136,7 +136,7 @@ Both are wrapped in `SidebarProvider` in their respective route components.
 | Runtime | Node 22, TypeScript (ESM, `moduleResolution: nodenext`) |
 | HTTP framework | Express 5 |
 | Database | PostgreSQL via `pg.Pool` singleton |
-| Auth | JWT (jsonwebtoken) + bcryptjs |
+| Auth | Clerk (`@clerk/react`, `@clerk/ui`, `@clerk/backend`) |
 | AI | OpenAI SDK → DeepSeek API (V3 + R1) |
 | Validation | Zod v4 (back-end + front-end) |
 | Frontend framework | React 19 + Vite 8 |
@@ -148,7 +148,7 @@ Both are wrapped in `SidebarProvider` in their respective route components.
 | Theming | next-themes |
 | Toasts | Sonner |
 | Font | Inter Variable (@fontsource-variable) |
-| Testing | Vitest + supertest (47 integration tests, real DB) |
+| Testing | Vitest + supertest (62 tests, real DB, Clerk mocked) |
 | CI | GitHub Actions (2 jobs: backend + frontend) |
 | Containerisation | Docker (multi-stage), 3 compose files (base / QA / prod) |
 

@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Check, Download, Eye, Loader2, Pencil, Trash2, X } from "lucide-react";
 
-import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
 import { updateTemplate, type Template } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -28,16 +27,14 @@ export function TemplateCard({
   onDelete,
   isDeleting,
 }: TemplateCardProps) {
-  const { getAccessToken } = useAuth();
   const { t } = useLanguage();
   const queryClient = useQueryClient();
-  const token = getAccessToken();
 
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(template.name);
 
   const renameMutation = useMutation({
-    mutationFn: (name: string) => updateTemplate(token!, template.id, { name }),
+    mutationFn: (name: string) => updateTemplate(template.id, { name }),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["templates"] }),
   });
 

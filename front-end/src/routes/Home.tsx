@@ -59,10 +59,9 @@ const DEEPSEEK_MODELS = [
 ];
 
 export default function Home() {
-  const { getAccessToken, user } = useAuth();
+  const { user } = useAuth();
   const { t } = useLanguage();
   const queryClient = useQueryClient();
-  const token = getAccessToken();
 
   const {
     messages,
@@ -122,14 +121,12 @@ export default function Home() {
 
   const { data: conversations = [] } = useQuery({
     queryKey: ["conversations"],
-    queryFn: () => fetchConversations(token!),
-    enabled: !!token,
+    queryFn: () => fetchConversations(),
   });
 
   const { data: presets = [], isFetched: presetsFetched } = useQuery({
     queryKey: ["presets"],
-    queryFn: () => fetchPresets(token!),
-    enabled: !!token,
+    queryFn: () => fetchPresets(),
   });
 
   useEffect(() => {
@@ -161,7 +158,7 @@ export default function Home() {
     const opId = loadOpRef.current;
     setLoadingConversation(true);
     try {
-      const conv = await fetchConversation(token!, id);
+      const conv = await fetchConversation(id);
       if (loadOpRef.current !== opId) return;
       setCurrentConversationId(conv.id);
       setMessages(
@@ -185,7 +182,7 @@ export default function Home() {
   // ── Delete conversation ───────────────────────────────────────────────────────
 
   const deleteConversationMutation = useMutation({
-    mutationFn: (id: string) => deleteConversation(token!, id),
+    mutationFn: (id: string) => deleteConversation(id),
     onSuccess: (_data, id) => {
       void queryClient.invalidateQueries({ queryKey: ["conversations"] });
       if (id === currentConversationId) handleNewChat();
@@ -198,12 +195,12 @@ export default function Home() {
     mutationFn: async () => {
       const name = templateName.trim() || "Invoice Template";
       if (currentTemplateId) {
-        return updateTemplate(token!, currentTemplateId, {
+        return updateTemplate(currentTemplateId, {
           name,
           html_content: templateHtml!,
         });
       }
-      return createTemplate(token!, {
+      return createTemplate({
         name,
         html_content: templateHtml!,
         preset_id: selectedPreset || undefined,
@@ -220,7 +217,7 @@ export default function Home() {
 
   const renameMutation = useMutation({
     mutationFn: (name: string) =>
-      updateTemplate(token!, currentTemplateId!, { name }),
+      updateTemplate(currentTemplateId!, { name }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["templates"] });
       toast.success(t("template_renamed"));
@@ -303,7 +300,6 @@ export default function Home() {
 
     try {
       const response = await sendChat(
-        token!,
         trimmed,
         selectedModel,
         currentConversationId ?? undefined,
