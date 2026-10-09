@@ -76,7 +76,7 @@ describe('Auth', () => {
 
     it('links a pre-Clerk account by verified email and keeps its data', async () => {
       const { rows } = await pool.query<{ id: string }>(
-        `INSERT INTO users (username, email, password_hash) VALUES ('Legacy', 'legacy@example.com', 'x')
+        `INSERT INTO users (username, email) VALUES ('Legacy', 'legacy@example.com')
          RETURNING id`,
       );
       setClerkIdentity({ clerkUserId: 'user_legacy', email: 'legacy@example.com', emailVerified: true, name: 'Legacy' });

@@ -90,7 +90,8 @@ Conversations with `title`, `preset_id`, `template_html`. Each conversation owns
 | `006_create_messages.sql` | messages table |
 | `007_add_user_role_and_prompt_count.sql` | role + ai_prompts_used on users |
 | `008_add_logo_to_presets.sql` | logo_data column (base64 data URL) on presets |
-| `009_clerk_auth.sql` | `clerk_user_id`, nullable `password_hash`, non-unique `username`, `trial_claims` (backfilled from used trials). Additive only: the unused `refresh_tokens` table and `password_hash` column are left for a later cleanup migration |
+| `009_clerk_auth.sql` | `clerk_user_id`, nullable `password_hash`, non-unique `username`, `trial_claims` (backfilled from used trials) |
+| `010_drop_legacy_auth.sql` | drops the pre-Clerk `refresh_tokens` table and `users.password_hash` |
 
 ## Docker
 
