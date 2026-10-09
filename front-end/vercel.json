@@ -1,4 +1,12 @@
 {
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "facturia-rose.vercel.app" }],
+      "destination": "https://facturia.website/:path*",
+      "permanent": true
+    }
+  ],
   "rewrites": [
     { "source": "/api/:path*", "destination": "https://facturia-api-qm9y.onrender.com/:path*" },
     { "source": "/(.*)", "destination": "/index.html" }

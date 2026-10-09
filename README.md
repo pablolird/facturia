@@ -6,7 +6,7 @@
 
 *Describe the invoice you want. Get print-ready HTML in seconds.*
 
-**[Live site](https://facturia-rose.vercel.app)** · Selected as one of the top 5 projects in the ITTI Gen AI Developer course
+**[Live site](https://facturia.website)** · Selected as one of the top 5 projects in the ITTI Gen AI Developer course
 
 [![CI](https://github.com/pablolird/facturia/actions/workflows/ci.yml/badge.svg)](https://github.com/pablolird/facturia/actions/workflows/ci.yml)
 ![Node.js](https://img.shields.io/badge/Node.js_22-339933?style=flat-square&logo=nodedotjs&logoColor=white)
